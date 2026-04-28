@@ -22,3 +22,28 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
+# Maven build output
+target/
+
+# Quarkus
+.quarkus/
+
+# Frontend build artifacts and dependencies
+src/main/webui/node_modules/
+src/main/webui/dist/
+src/main/webui/.vite/
+
+# IDE files
+.idea/
+.eclipse/
+*.iml
+*.ipr
+*.iws
+.settings/
+.project
+.classpath
+
+# OS files
+.DS_Store
+Thumbs.db
