@@ -29,6 +29,10 @@ target/
 # Quarkus
 .quarkus/
 
+# Local environment overrides (may contain secrets – not committed)
+# Use .env.example as a template
+.env
+
 # Frontend build artifacts and dependencies
 src/main/webui/node_modules/
 src/main/webui/dist/

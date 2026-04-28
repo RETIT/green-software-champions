@@ -14,13 +14,13 @@ quarkus:
 
   # ---------------------------------------------------------------------------
   # Datasource – PostgreSQL (production) / H2 (test profile)
+  # jdbc.url is intentionally absent here so that Quarkus Dev Services can
+  # start a managed container in dev mode. The production URL is set in %prod.
   # ---------------------------------------------------------------------------
   datasource:
     db-kind: postgresql
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:postgres}
-    jdbc:
-      url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:greensoft}
 
   hibernate-orm:
     database:
@@ -37,9 +37,10 @@ quarkus:
 
   # ---------------------------------------------------------------------------
   # OIDC – Keycloak integration
+  # auth-server-url is intentionally absent here so that Quarkus Dev Services
+  # can start a managed Keycloak container in dev mode. Set in %prod.
   # ---------------------------------------------------------------------------
   oidc:
-    auth-server-url: ${KEYCLOAK_URL:http://localhost:8180}/realms/${KEYCLOAK_REALM:green-software}
     client-id: ${KEYCLOAK_CLIENT_ID:green-champions}
     credentials:
       secret: ${KEYCLOAK_SECRET:change-me-in-production}
@@ -118,7 +119,7 @@ cloud:
 # =============================================================================
 carbon:
   sync:
-    cron: ${CARBON_SYNC_CRON:"0 0 2 1 * ?"}
+    cron: "${CARBON_SYNC_CRON:0 0 2 1 * ?}"
 
 # =============================================================================
 # Teams Configuration
@@ -179,6 +180,17 @@ teams:
           project-name: "Delta Azure Resource Group"
 
 # =============================================================================
+# Production profile – real database and Keycloak URLs
+# =============================================================================
+"%prod":
+  quarkus:
+    datasource:
+      jdbc:
+        url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:greensoft}
+    oidc:
+      auth-server-url: ${KEYCLOAK_URL:http://localhost:8180}/realms/${KEYCLOAK_REALM:green-software}
+
+# =============================================================================
 # Test profile overrides
 # =============================================================================
 "%test":
@@ -199,11 +211,40 @@ teams:
 
 # =============================================================================
 # Dev profile overrides
+# Quarkus Dev Services start PostgreSQL and Keycloak automatically via Docker/
+# Podman when no explicit URL is configured in this profile.
 # =============================================================================
 "%dev":
   quarkus:
+    # PostgreSQL Dev Service ---------------------------------------------------
+    # No jdbc.url is set globally, so Quarkus starts a managed Postgres container.
+    datasource:
+      devservices:
+        enabled: true
+
+    # Keycloak Dev Service -----------------------------------------------------
+    # No auth-server-url is set globally, so Quarkus starts a managed Keycloak
+    # container and injects the correct URL automatically.
     oidc:
-      enabled: false
+      enabled: true
+      client-id: green-champions
+
+    keycloak:
+      devservices:
+        enabled: true
+        realm-name: green-software
+        # username → password
+        users:
+          developer: developer
+          admin: admin
+        # username → realm roles  (matches @RolesAllowed in resources)
+        roles:
+          developer:
+            - user
+          admin:
+            - user
+            - admin
+
     hibernate-orm:
       log:
         sql: true
