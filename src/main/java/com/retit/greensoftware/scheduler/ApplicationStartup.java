@@ -1,9 +1,12 @@
 package com.retit.greensoftware.scheduler;
 
+import com.retit.greensoftware.service.DevSampleDataService;
 import com.retit.greensoftware.service.TeamSetupService;
 import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
+import jakarta.enterprise.inject.Any;
+import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
@@ -19,9 +22,23 @@ public class ApplicationStartup {
     @Inject
     TeamSetupService teamSetupService;
 
+    /**
+     * Injected as {@link Instance} so that the bean is optional:
+     * {@link DevSampleDataService} is only active in the "dev" build profile.
+     */
+    @Inject
+    @Any
+    Instance<DevSampleDataService> devSampleDataService;
+
     void onStart(@Observes StartupEvent event) {
         LOG.info("Green Software Champions starting up...");
         teamSetupService.initialiseTeams();
+
+        // Seed sample data when running in dev mode (bean absent in other profiles)
+        if (!devSampleDataService.isUnsatisfied()) {
+            devSampleDataService.get().seedSampleData();
+        }
+
         LOG.info("Application startup complete.");
     }
 }
