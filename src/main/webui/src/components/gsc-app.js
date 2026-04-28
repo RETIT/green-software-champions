@@ -269,9 +269,8 @@ class GscApp extends LitElement {
 
   _formatCo2(kg) {
     if (kg === null || kg === undefined) return '—';
-    if (kg >= 1_000_000) return `${(kg / 1_000_000).toFixed(2)} t`;
     if (kg >= 1_000) return `${(kg / 1_000).toFixed(2)} t`;
-    return `${kg.toFixed(0)} kg`;
+    return `${Math.round(kg)} kg`;
   }
 
   render() {
