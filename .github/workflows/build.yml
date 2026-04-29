@@ -33,7 +33,7 @@ jobs:
 
     strategy:
       matrix:
-        java: [ "17" ]   # extend to [17, 21] to test multiple JDK versions
+        java: [ "25" ]   # extend to [17, 21] to test multiple JDK versions
 
     steps:
       - name: Checkout
