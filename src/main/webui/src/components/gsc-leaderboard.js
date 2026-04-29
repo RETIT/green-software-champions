@@ -13,72 +13,65 @@ class GscLeaderboard extends LitElement {
   static styles = css`
     :host {
       display: block;
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: 'Source Sans 3', 'Source Sans Pro', Helvetica, sans-serif;
+      font-weight: 300;
     }
 
     .section-header {
       display: flex;
-      align-items: center;
+      align-items: baseline;
       justify-content: space-between;
-      margin-bottom: 1.25rem;
-      gap: 1rem;
+      margin-bottom: 1em;
+      border-bottom: 1px solid rgba(144, 144, 144, 0.4);
+      padding-bottom: 0.5em;
     }
 
     .section-title {
-      font-size: 1rem;
-      font-weight: 600;
-      color: #CBD5E1;
-      letter-spacing: -0.01em;
+      font-size: 1.1em;
+      font-weight: 400;
+      color: #555;
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.4em;
     }
 
     .section-meta {
-      font-size: 0.72rem;
-      color: #4B6A8A;
-      font-weight: 400;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.07);
-      border-radius: 20px;
-      padding: 0.2rem 0.75rem;
+      font-size: 0.8em;
+      color: #999;
+      font-weight: 300;
     }
 
     .leaderboard-grid {
       display: grid;
-      gap: 0.75rem;
-    }
-
-    gsc-team-card {
-      display: block;
+      gap: 0.75em;
     }
 
     .empty-state {
       text-align: center;
-      padding: 5rem 2rem;
-      color: #4B6A8A;
-      background: #0D1929;
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: 14px;
+      padding: 4em 2em;
+      color: #999;
+      background: #fff;
+      border-radius: 3px;
+      box-shadow: 0px 3px 10px 3px rgba(0, 0, 0, 0.08);
     }
 
     .empty-state .empty-icon {
-      font-size: 3rem;
-      margin-bottom: 1rem;
-      opacity: 0.5;
+      font-size: 2.5em;
+      margin-bottom: 0.75em;
+      opacity: 0.4;
     }
 
     .empty-state p {
-      font-size: 0.875rem;
+      font-size: 0.9em;
       line-height: 1.6;
     }
 
     .legend {
       display: flex;
-      gap: 1rem;
-      margin-bottom: 1rem;
-      font-size: 0.75rem;
-      color: #4B6A8A;
+      gap: 1.25em;
+      margin-bottom: 1em;
+      font-size: 0.78em;
+      color: #999;
       flex-wrap: wrap;
       align-items: center;
     }
@@ -86,8 +79,8 @@ class GscLeaderboard extends LitElement {
     .legend-item {
       display: flex;
       align-items: center;
-      gap: 0.35rem;
-      font-weight: 500;
+      gap: 0.35em;
+      font-weight: 400;
     }
 
     .legend-dot {
@@ -100,7 +93,7 @@ class GscLeaderboard extends LitElement {
     .legend-divider {
       width: 1px;
       height: 12px;
-      background: rgba(255, 255, 255, 0.08);
+      background: rgba(144, 144, 144, 0.4);
     }
   `;
 
@@ -109,7 +102,7 @@ class GscLeaderboard extends LitElement {
       return html`
         <div class="empty-state">
           <div class="empty-icon">📊</div>
-          <p>No leaderboard data available for <strong style="color:#94A3B8">${this.period}</strong>.<br/>
+          <p>No leaderboard data available for <strong>${this.period}</strong>.<br/>
           Run a carbon data sync to populate the leaderboard.</p>
         </div>
       `;
@@ -117,23 +110,21 @@ class GscLeaderboard extends LitElement {
 
     return html`
       <div class="section-header">
-        <div class="section-title">
-          🏆 Carbon Footprint Leaderboard
-        </div>
+        <div class="section-title">🏆 Carbon Footprint Leaderboard</div>
         <div class="section-meta">${this.period}</div>
       </div>
 
       <div class="legend">
         <div class="legend-item">
-          <div class="legend-dot" style="background:#10B981"></div>
+          <div class="legend-dot" style="background:#75b729"></div>
           <span>Low footprint</span>
         </div>
         <div class="legend-item">
-          <div class="legend-dot" style="background:#F59E0B"></div>
+          <div class="legend-dot" style="background:#e09c1a"></div>
           <span>Medium footprint</span>
         </div>
         <div class="legend-item">
-          <div class="legend-dot" style="background:#F87171"></div>
+          <div class="legend-dot" style="background:#c0392b"></div>
           <span>High footprint</span>
         </div>
         <div class="legend-divider"></div>

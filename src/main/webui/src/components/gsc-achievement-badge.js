@@ -11,36 +11,36 @@ class GscAchievementBadge extends LitElement {
   };
 
   static styles = css`
-    :host { display: inline-block; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    :host { display: inline-block; font-family: 'Source Sans 3', 'Source Sans Pro', Helvetica, sans-serif; }
 
     .badge {
       display: inline-flex;
       align-items: center;
-      gap: 0.3rem;
-      background: rgba(251, 191, 36, 0.08);
-      border: 1px solid rgba(251, 191, 36, 0.22);
-      border-radius: 20px;
-      padding: 0.2rem 0.65rem;
-      font-size: 0.72rem;
-      font-weight: 600;
-      color: #FBBF24;
+      gap: 0.3em;
+      background: rgba(230, 168, 23, 0.1);
+      border: 1px solid rgba(230, 168, 23, 0.35);
+      border-radius: 3px;
+      padding: 0.15em 0.6em;
+      font-size: 0.78em;
+      font-weight: 400;
+      color: #9a6e00;
       white-space: nowrap;
       cursor: help;
-      transition: all 0.15s ease;
+      transition: all 0.2s ease;
       letter-spacing: 0.01em;
     }
 
     .badge:hover {
-      background: rgba(251, 191, 36, 0.15);
-      border-color: rgba(251, 191, 36, 0.4);
+      background: rgba(230, 168, 23, 0.18);
+      border-color: rgba(230, 168, 23, 0.6);
+      box-shadow: 0 1px 4px rgba(230, 168, 23, 0.2);
     }
 
     .badge.compact {
-      padding: 0.1rem 0.3rem;
-      font-size: 1rem;
+      padding: 0.1em 0.25em;
+      font-size: 1em;
       background: transparent;
       border: none;
-      gap: 0;
     }
 
     .badge.compact:hover {
@@ -48,7 +48,7 @@ class GscAchievementBadge extends LitElement {
     }
 
     .icon { font-size: 1em; line-height: 1; }
-    .title { font-size: 0.72em; }
+    .title { font-size: 0.9em; }
   `;
 
   render() {

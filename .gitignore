@@ -51,3 +51,4 @@ src/main/webui/.vite/
 # OS files
 .DS_Store
 Thumbs.db
+/temp/

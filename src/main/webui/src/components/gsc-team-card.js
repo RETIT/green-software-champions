@@ -1,8 +1,5 @@
 import { LitElement, html, css } from 'lit';
 
-/**
- * Individual team card in the leaderboard.
- */
 class GscTeamCard extends LitElement {
   static properties = {
     entry: { type: Object },
@@ -12,45 +9,50 @@ class GscTeamCard extends LitElement {
   static styles = css`
     :host {
       display: block;
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: 'Source Sans 3', 'Source Sans Pro', Helvetica, sans-serif;
+      font-weight: 300;
     }
 
     /* ── Card shell ─────────────────────────────────────── */
     .card {
-      background: #0D1929;
-      border: 1px solid rgba(255, 255, 255, 0.07);
-      border-radius: 14px;
-      padding: 1.125rem 1.5rem;
-      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      background: #fff;
+      border-radius: 3px;
+      box-shadow: 0px 3px 10px 3px rgba(0, 0, 0, 0.08);
+      padding: 1em 1.5em;
       cursor: pointer;
-      user-select: none;
+      transition: box-shadow 0.2s ease, transform 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* top accent bar that expands on hover */
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      height: 3px;
+      width: 0;
+      background: #568139;
+      transition: width 0.4s ease;
     }
 
     .card:hover {
-      border-color: rgba(255, 255, 255, 0.13);
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      box-shadow: 0px 3px 7px 2px rgba(0, 0, 0, 0.18);
+      transform: scale(1.005);
     }
 
-    .card.rank-1 {
-      border-color: rgba(255, 215, 0, 0.22);
-      background: linear-gradient(135deg, #0D1929 0%, #181206 100%);
-    }
+    .card:hover::before { width: 100%; }
 
-    .card.rank-2 {
-      border-color: rgba(192, 192, 192, 0.2);
-      background: linear-gradient(135deg, #0D1929 0%, #121417 100%);
-    }
-
-    .card.rank-3 {
-      border-color: rgba(205, 127, 50, 0.2);
-      background: linear-gradient(135deg, #0D1929 0%, #170F07 100%);
-    }
+    /* Rank-specific top color */
+    .card.rank-1::before { background: #d4ac0d; width: 100%; }
+    .card.rank-2::before { background: #808080; width: 100%; }
+    .card.rank-3::before { background: #a0522d; width: 100%; }
 
     /* ── Top row ────────────────────────────────────────── */
     .top-row {
       display: flex;
       align-items: center;
-      gap: 1rem;
+      gap: 1em;
     }
 
     /* Rank badge */
@@ -58,35 +60,33 @@ class GscTeamCard extends LitElement {
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 36px;
-      height: 36px;
-      border-radius: 10px;
-      font-size: 1rem;
-      font-weight: 800;
-      background: rgba(255, 255, 255, 0.05);
-      color: #4B6A8A;
+      width: 2.2em;
+      height: 2.2em;
+      border-radius: 3px;
+      font-size: 1em;
+      font-weight: 700;
+      background: rgba(144, 144, 144, 0.1);
+      color: #999;
       flex-shrink: 0;
-      letter-spacing: -0.02em;
+      border: 1px solid rgba(144, 144, 144, 0.3);
     }
 
-    .rank-1 .rank-badge { background: rgba(255, 215, 0, 0.1);  color: #FBBF24; }
-    .rank-2 .rank-badge { background: rgba(192, 192, 192, 0.1); color: #CBD5E1; }
-    .rank-3 .rank-badge { background: rgba(205, 127, 50, 0.1);  color: #D97706; }
+    .rank-1 .rank-badge { background: rgba(212, 172, 13, 0.1); color: #9a7b00; border-color: rgba(212,172,13,0.35); }
+    .rank-2 .rank-badge { background: rgba(128, 128, 128, 0.1); color: #555; border-color: rgba(128,128,128,0.3); }
+    .rank-3 .rank-badge { background: rgba(160, 82, 45, 0.1);  color: #7a3b1a; border-color: rgba(160,82,45,0.3); }
 
-    /* Team icon */
     .team-icon {
-      font-size: 1.625rem;
+      font-size: 1.6em;
       flex-shrink: 0;
       line-height: 1;
     }
 
-    /* Team name / color bar */
     .team-info { flex: 1; min-width: 0; }
 
     .team-name {
-      font-size: 0.9375rem;
+      font-size: 1em;
       font-weight: 600;
-      color: #E2E8F0;
+      color: #555;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -95,131 +95,126 @@ class GscTeamCard extends LitElement {
     .team-color-bar {
       height: 2px;
       border-radius: 1px;
-      margin-top: 5px;
-      width: 32px;
-      opacity: 0.7;
+      margin-top: 4px;
+      width: 28px;
     }
 
-    /* Metrics row */
+    /* Metrics */
     .metrics {
       display: flex;
-      gap: 2rem;
+      gap: 2em;
       align-items: center;
     }
 
     .metric { text-align: right; }
 
     .metric .value {
-      font-size: 1.0625rem;
-      font-weight: 700;
-      color: #E2E8F0;
-      letter-spacing: -0.02em;
+      font-size: 1.05em;
+      font-weight: 600;
+      color: #555;
     }
 
     .metric .label {
-      font-size: 0.67rem;
-      color: #4B6A8A;
+      font-size: 0.68em;
+      color: #999;
       text-transform: uppercase;
       letter-spacing: 0.06em;
-      margin-top: 2px;
-      font-weight: 500;
+      margin-top: 1px;
+      font-weight: 400;
     }
 
-    .reduction.positive { color: #34D399; }
-    .reduction.negative { color: #F87171; }
-    .reduction.neutral  { color: #4B6A8A; }
+    .reduction.positive { color: #568139; }
+    .reduction.negative { color: #c0392b; }
+    .reduction.neutral  { color: #999; }
 
     /* Achievements */
     .achievements {
       display: flex;
-      gap: 0.35rem;
+      gap: 0.3em;
     }
 
     /* Expand chevron */
     .chevron {
-      font-size: 0.75rem;
-      color: #4B6A8A;
+      font-size: 0.7em;
+      color: #bbb;
       transition: transform 0.2s ease;
       flex-shrink: 0;
-      margin-left: 0.25rem;
     }
 
     .chevron.open { transform: rotate(180deg); }
 
     /* ── Expanded section ───────────────────────────────── */
     .expand-section {
-      margin-top: 1.125rem;
-      padding-top: 1.125rem;
-      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      margin-top: 1em;
+      padding-top: 1em;
+      border-top: 1px solid rgba(144, 144, 144, 0.25);
       display: grid;
-      gap: 1rem;
+      gap: 1em;
     }
 
     .expand-label {
-      font-size: 0.68rem;
+      font-size: 0.7em;
       font-weight: 600;
-      color: #4B6A8A;
+      color: #999;
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.4em;
     }
 
     /* Provider chips */
     .provider-breakdown {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 0.625rem;
+      gap: 0.6em;
     }
 
     .provider-chip {
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: 10px;
-      padding: 0.75rem;
+      background: #f9f9f9;
+      border: 1px solid rgba(144, 144, 144, 0.3);
+      border-radius: 3px;
+      padding: 0.65em 0.75em;
       text-align: center;
-      transition: border-color 0.15s;
+      transition: border-color 0.15s, box-shadow 0.15s;
     }
 
     .provider-chip:hover {
-      border-color: rgba(255, 255, 255, 0.11);
+      border-color: #75b729;
+      box-shadow: 0 1px 4px rgba(117, 183, 41, 0.15);
     }
 
     .provider-chip .pname {
-      font-size: 0.68rem;
-      color: #4B6A8A;
+      font-size: 0.7em;
+      color: #999;
       text-transform: uppercase;
-      letter-spacing: 0.06em;
-      font-weight: 600;
-      margin-bottom: 0.35rem;
+      letter-spacing: 0.05em;
+      font-weight: 400;
+      margin-bottom: 0.25em;
     }
 
     .provider-chip .pvalue {
-      font-size: 0.9375rem;
-      font-weight: 700;
-      color: #CBD5E1;
-      letter-spacing: -0.01em;
+      font-size: 0.95em;
+      font-weight: 600;
+      color: #555;
     }
 
     /* Share bar */
-    .share-bar-container { }
-
     .share-bar-label {
       display: flex;
       justify-content: space-between;
-      font-size: 0.72rem;
-      color: #4B6A8A;
-      font-weight: 500;
-      margin-bottom: 0.4rem;
+      font-size: 0.75em;
+      color: #999;
+      font-weight: 400;
+      margin-bottom: 0.3em;
     }
 
     .share-bar-label span:last-child {
-      color: #94A3B8;
+      color: #555;
       font-weight: 600;
     }
 
     .share-bar-track {
       height: 5px;
-      background: rgba(255, 255, 255, 0.06);
+      background: rgba(144, 144, 144, 0.15);
       border-radius: 3px;
       overflow: hidden;
     }
@@ -229,9 +224,6 @@ class GscTeamCard extends LitElement {
       border-radius: 3px;
       transition: width 0.8s ease;
     }
-
-    /* Achievements expanded */
-    .achievements-section { }
   `;
 
   constructor() {
@@ -259,7 +251,6 @@ class GscTeamCard extends LitElement {
   render() {
     const e = this.entry;
     if (!e) return html``;
-
     const rankClass = e.rank <= 3 ? `rank-${e.rank}` : '';
 
     return html`
@@ -302,7 +293,7 @@ class GscTeamCard extends LitElement {
 
         ${this.expanded ? html`
           <div class="expand-section">
-            <div class="share-bar-container">
+            <div>
               <div class="expand-label">Company share of cloud emissions</div>
               <div class="share-bar-label">
                 <span>Cloud carbon share</span>
@@ -334,9 +325,9 @@ class GscTeamCard extends LitElement {
             </div>
 
             ${e.achievements && e.achievements.length > 0 ? html`
-              <div class="achievements-section">
+              <div>
                 <div class="expand-label">🏅 Achievements</div>
-                <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+                <div style="display:flex;gap:0.5em;flex-wrap:wrap">
                   ${e.achievements.map(a => html`
                     <gsc-achievement-badge .achievement="${a}"></gsc-achievement-badge>
                   `)}

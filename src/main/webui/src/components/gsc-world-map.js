@@ -12,37 +12,36 @@ class GscWorldMap extends LitElement {
   static styles = css`
     :host {
       display: block;
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: 'Source Sans 3', 'Source Sans Pro', Helvetica, sans-serif;
+      font-weight: 300;
     }
 
     .section-header {
       display: flex;
-      align-items: center;
+      align-items: baseline;
       justify-content: space-between;
-      margin-bottom: 1.25rem;
+      margin-bottom: 1em;
+      border-bottom: 1px solid rgba(144, 144, 144, 0.4);
+      padding-bottom: 0.5em;
     }
 
     .section-title {
-      font-size: 1rem;
-      font-weight: 600;
-      color: #CBD5E1;
-      letter-spacing: -0.01em;
+      font-size: 1.1em;
+      font-weight: 400;
+      color: #555;
     }
 
     .section-meta {
-      font-size: 0.72rem;
-      color: #4B6A8A;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.07);
-      border-radius: 20px;
-      padding: 0.2rem 0.75rem;
+      font-size: 0.8em;
+      color: #999;
+      font-weight: 300;
     }
 
     .map-container {
-      background: #0D1929;
-      border: 1px solid rgba(255, 255, 255, 0.07);
-      border-radius: 16px;
-      padding: 1.75rem;
+      background: #fff;
+      border-radius: 3px;
+      box-shadow: 0px 3px 10px 3px rgba(0, 0, 0, 0.08);
+      padding: 1.5em;
       position: relative;
       overflow: hidden;
     }
@@ -53,19 +52,20 @@ class GscWorldMap extends LitElement {
       display: block;
     }
 
+    /* Map colors aligned to RETIT light theme */
     .land {
-      fill: #132135;
-      stroke: #1E3A5A;
+      fill: #d8edc8;
+      stroke: #b0d090;
       stroke-width: 0.5;
     }
 
     .ocean {
-      fill: #0A1520;
+      fill: #e8f4fb;
     }
 
     .graticule {
       fill: none;
-      stroke: rgba(255, 255, 255, 0.03);
+      stroke: rgba(144, 144, 144, 0.15);
       stroke-width: 0.3;
     }
 
@@ -75,13 +75,13 @@ class GscWorldMap extends LitElement {
     }
 
     .team-bubble circle {
-      opacity: 0.8;
+      opacity: 0.82;
       transition: all 0.25s ease;
     }
 
     .team-bubble:hover circle {
       opacity: 1;
-      filter: drop-shadow(0 0 10px currentColor);
+      filter: drop-shadow(0 0 6px currentColor);
     }
 
     .team-bubble text {
@@ -94,16 +94,16 @@ class GscWorldMap extends LitElement {
     }
 
     .team-label {
-      fill: #94A3B8;
+      fill: #555;
       font-size: 9px;
       text-anchor: middle;
       pointer-events: none;
-      font-family: 'Inter', sans-serif;
-      font-weight: 500;
+      font-family: 'Source Sans 3', 'Source Sans Pro', sans-serif;
+      font-weight: 600;
     }
 
     @keyframes pulse-ring {
-      0%   { r: 0; opacity: 0.7; }
+      0%   { r: 0; opacity: 0.6; }
       100% { r: 40px; opacity: 0; }
     }
 
@@ -113,70 +113,71 @@ class GscWorldMap extends LitElement {
       animation: pulse-ring 2.5s ease-out infinite;
     }
 
-    /* ── Legend ─────────────────────────────────────────── */
+    /* Legend */
     .legend {
       display: flex;
-      gap: 1.5rem;
-      margin-top: 1.25rem;
+      gap: 1.5em;
+      margin-top: 1em;
       flex-wrap: wrap;
-      font-size: 0.75rem;
-      color: #4B6A8A;
+      font-size: 0.78em;
+      color: #999;
       align-items: center;
-      font-weight: 500;
+      font-weight: 400;
     }
 
     .legend-bubble-demo {
       display: flex;
       align-items: center;
-      gap: 0.45rem;
+      gap: 0.4em;
     }
 
     .legend-circle {
       border-radius: 50%;
-      background: rgba(16, 185, 129, 0.35);
-      border: 2px solid #10B981;
+      background: rgba(86, 129, 57, 0.25);
+      border: 2px solid #568139;
     }
 
-    /* ── Tooltip ─────────────────────────────────────────── */
+    /* Tooltip */
     .tooltip {
       position: absolute;
-      background: #0D1929;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 10px;
-      padding: 0.75rem 1rem;
+      background: #fff;
+      border: 1px solid rgba(144, 144, 144, 0.35);
+      border-radius: 3px;
+      padding: 0.7em 1em;
       pointer-events: none;
-      font-size: 0.78rem;
-      min-width: 170px;
+      font-size: 0.8em;
+      min-width: 160px;
       transition: opacity 0.15s;
       z-index: 10;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      box-shadow: 0px 3px 7px 2px rgba(0, 0, 0, 0.12);
     }
 
     .tooltip.hidden { opacity: 0; }
 
     .tooltip-name  {
-      font-weight: 700;
-      color: #E2E8F0;
-      margin-bottom: 0.4rem;
-      font-size: 0.8125rem;
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 0.35em;
+      font-size: 0.95em;
     }
 
     .tooltip-row {
       display: flex;
       justify-content: space-between;
-      gap: 0.75rem;
-      color: #4B6A8A;
-      font-weight: 500;
-      margin-top: 0.2rem;
+      gap: 0.75em;
+      color: #999;
+      font-weight: 400;
+      margin-top: 0.15em;
+      font-size: 0.9em;
     }
 
     .tooltip-row span:last-child {
       font-weight: 600;
-      color: #34D399;
+      color: #568139;
     }
 
     .tooltip-row span.bad {
-      color: #F87171;
+      color: #c0392b;
     }
   `;
 
@@ -246,41 +247,24 @@ class GscWorldMap extends LitElement {
         })}
       </g>
       <g class="land">
-        <path d="M 115,80 L 200,70 L 280,80 L 300,100 L 320,140 L 340,180
-                 L 310,220 L 280,260 L 250,280 L 220,290 L 200,280
-                 L 180,260 L 160,240 L 140,220 L 120,200 L 100,180
-                 L 90,150 L 95,120 Z"/>
+        <path d="M 115,80 L 200,70 L 280,80 L 300,100 L 320,140 L 340,180 L 310,220 L 280,260 L 250,280 L 220,290 L 200,280 L 180,260 L 160,240 L 140,220 L 120,200 L 100,180 L 90,150 L 95,120 Z"/>
         <path d="M 250,280 L 270,300 L 260,320 L 240,310 L 230,295 Z"/>
-        <path d="M 260,320 L 300,320 L 340,340 L 360,380 L 370,420
-                 L 350,460 L 320,480 L 290,470 L 270,440 L 255,400
-                 L 240,360 L 245,330 Z"/>
-        <path d="M 420,80 L 500,75 L 530,90 L 540,110 L 520,130
-                 L 500,140 L 480,145 L 460,140 L 440,130 L 430,110 Z"/>
+        <path d="M 260,320 L 300,320 L 340,340 L 360,380 L 370,420 L 350,460 L 320,480 L 290,470 L 270,440 L 255,400 L 240,360 L 245,330 Z"/>
+        <path d="M 420,80 L 500,75 L 530,90 L 540,110 L 520,130 L 500,140 L 480,145 L 460,140 L 440,130 L 430,110 Z"/>
         <path d="M 470,55 L 500,50 L 510,70 L 495,90 L 475,85 Z"/>
         <path d="M 400,90 L 415,85 L 420,100 L 408,108 Z"/>
         <path d="M 420,120 L 445,115 L 450,140 L 430,148 L 418,135 Z"/>
-        <path d="M 440,150 L 520,145 L 560,170 L 575,210 L 565,270
-                 L 540,330 L 510,370 L 490,390 L 470,375 L 450,340
-                 L 435,300 L 428,250 L 430,200 L 435,170 Z"/>
-        <path d="M 530,130 L 590,125 L 610,145 L 600,170 L 570,175
-                 L 540,165 L 530,148 Z"/>
-        <path d="M 490,60 L 600,50 L 700,55 L 760,65 L 780,85
-                 L 750,100 L 700,105 L 640,100 L 580,95 L 530,90
-                 L 510,75 Z"/>
-        <path d="M 620,150 L 680,145 L 700,165 L 700,200 L 680,230
-                 L 660,240 L 640,225 L 625,200 L 615,175 Z"/>
-        <path d="M 730,190 L 780,185 L 800,205 L 790,230 L 760,235
-                 L 735,220 Z"/>
-        <path d="M 760,250 L 810,245 L 840,255 L 845,270 L 810,275
-                 L 770,268 Z"/>
-        <path d="M 720,90 L 800,85 L 840,100 L 850,130 L 830,160
-                 L 800,170 L 760,165 L 730,145 L 715,120 Z"/>
+        <path d="M 440,150 L 520,145 L 560,170 L 575,210 L 565,270 L 540,330 L 510,370 L 490,390 L 470,375 L 450,340 L 435,300 L 428,250 L 430,200 L 435,170 Z"/>
+        <path d="M 530,130 L 590,125 L 610,145 L 600,170 L 570,175 L 540,165 L 530,148 Z"/>
+        <path d="M 490,60 L 600,50 L 700,55 L 760,65 L 780,85 L 750,100 L 700,105 L 640,100 L 580,95 L 530,90 L 510,75 Z"/>
+        <path d="M 620,150 L 680,145 L 700,165 L 700,200 L 680,230 L 660,240 L 640,225 L 625,200 L 615,175 Z"/>
+        <path d="M 730,190 L 780,185 L 800,205 L 790,230 L 760,235 L 735,220 Z"/>
+        <path d="M 760,250 L 810,245 L 840,255 L 845,270 L 810,275 L 770,268 Z"/>
+        <path d="M 720,90 L 800,85 L 840,100 L 850,130 L 830,160 L 800,170 L 760,165 L 730,145 L 715,120 Z"/>
         <path d="M 855,100 L 870,95 L 880,115 L 865,125 L 852,112 Z"/>
-        <path d="M 750,320 L 840,315 L 880,335 L 890,370 L 870,405
-                 L 830,420 L 790,415 L 760,390 L 745,355 L 745,330 Z"/>
+        <path d="M 750,320 L 840,315 L 880,335 L 890,370 L 870,405 L 830,420 L 790,415 L 760,390 L 745,355 L 745,330 Z"/>
         <path d="M 895,400 L 905,390 L 912,405 L 905,418 L 895,412 Z"/>
-        <path d="M 295,30 L 340,20 L 370,35 L 365,60 L 340,70
-                 L 310,65 L 295,50 Z"/>
+        <path d="M 295,30 L 340,20 L 370,35 L 365,60 L 340,70 L 310,65 L 295,50 Z"/>
       </g>
     `;
   }
@@ -345,7 +329,7 @@ class GscWorldMap extends LitElement {
               </span>
             </div>
             ${t.entry.achievements && t.entry.achievements.length > 0 ? html`
-              <div class="tooltip-row" style="margin-top:0.35rem;justify-content:flex-start;gap:0.25rem">
+              <div class="tooltip-row" style="justify-content:flex-start;gap:0.25em;margin-top:0.3em">
                 ${t.entry.achievements.map(a => html`<span title="${a.title}">${a.badgeIcon}</span>`)}
               </div>
             ` : ''}
