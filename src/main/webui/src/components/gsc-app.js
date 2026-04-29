@@ -19,14 +19,18 @@ class GscApp extends LitElement {
     :host {
       display: block;
       min-height: 100vh;
-      background: linear-gradient(135deg, #0a0f1e 0%, #0d1b2a 50%, #0a1628 100%);
+      background: var(--bg-base, #07101F);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     }
 
+    /* ── Header ─────────────────────────────────────────── */
     header {
-      background: rgba(255, 255, 255, 0.05);
-      backdrop-filter: blur(10px);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      padding: 1rem 2rem;
+      background: rgba(13, 25, 41, 0.95);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+      padding: 0 2rem;
+      height: 64px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -39,48 +43,82 @@ class GscApp extends LitElement {
       display: flex;
       align-items: center;
       gap: 0.75rem;
+      text-decoration: none;
     }
 
-    .logo-emoji { font-size: 2rem; }
+    .logo-mark {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      border-radius: 9px;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+      box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.3), 0 4px 12px rgba(16, 185, 129, 0.2);
+    }
 
-    .logo-text {
-      font-size: 1.4rem;
+    .logo-text-group { display: flex; flex-direction: column; }
+
+    .logo-brand {
+      font-size: 0.95rem;
       font-weight: 700;
-      background: linear-gradient(90deg, #4caf50, #2196f3, #ff9800);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      color: #F1F5F9;
+      letter-spacing: 0.04em;
+      line-height: 1;
+    }
+
+    .logo-brand span {
+      color: #34D399;
     }
 
     .logo-subtitle {
-      font-size: 0.75rem;
-      color: #7a9bb5;
-      margin-top: -4px;
+      font-size: 0.65rem;
+      font-weight: 400;
+      color: #4B6A8A;
+      letter-spacing: 0.03em;
+      margin-top: 2px;
+      text-transform: uppercase;
     }
 
+    /* ── Navigation ─────────────────────────────────────── */
     nav {
       display: flex;
-      gap: 0.5rem;
+      gap: 2px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 10px;
+      padding: 3px;
     }
 
     .nav-btn {
       background: transparent;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      color: #c0d0e0;
+      border: none;
+      color: #94A3B8;
       padding: 0.4rem 1rem;
-      border-radius: 20px;
+      border-radius: 7px;
       cursor: pointer;
-      font-size: 0.875rem;
-      transition: all 0.2s;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      font-family: inherit;
+      transition: all 0.15s ease;
+      letter-spacing: 0.01em;
+      white-space: nowrap;
     }
 
-    .nav-btn:hover,
+    .nav-btn:hover {
+      color: #F1F5F9;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
     .nav-btn.active {
-      background: rgba(76, 175, 80, 0.2);
-      border-color: #4caf50;
+      background: #10B981;
       color: #fff;
+      box-shadow: 0 1px 6px rgba(16, 185, 129, 0.35);
     }
 
+    /* ── Period selector ────────────────────────────────── */
     .period-selector {
       display: flex;
       align-items: center;
@@ -88,87 +126,199 @@ class GscApp extends LitElement {
     }
 
     .period-selector label {
-      font-size: 0.8rem;
-      color: #7a9bb5;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: #4B6A8A;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
     }
 
     .period-selector input[type="month"] {
       background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      color: #e0e6f0;
-      padding: 0.3rem 0.6rem;
-      border-radius: 6px;
-      font-size: 0.875rem;
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      color: #CBD5E1;
+      padding: 0.35rem 0.65rem;
+      border-radius: 8px;
+      font-size: 0.8125rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s;
+      cursor: pointer;
     }
 
+    .period-selector input[type="month"]:hover,
+    .period-selector input[type="month"]:focus {
+      border-color: rgba(16, 185, 129, 0.5);
+    }
+
+    /* ── Main content ───────────────────────────────────── */
     main {
-      max-width: 1400px;
+      max-width: 1360px;
       margin: 0 auto;
-      padding: 2rem;
+      padding: 2rem 2rem 3rem;
     }
 
+    /* ── Hero band ──────────────────────────────────────── */
+    .hero-band {
+      background: linear-gradient(135deg, #0D1929 0%, #0F2035 50%, #091522 100%);
+      border: 1px solid rgba(16, 185, 129, 0.12);
+      border-radius: 16px;
+      padding: 1.5rem 2rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .hero-icon {
+      font-size: 2.5rem;
+      flex-shrink: 0;
+    }
+
+    .hero-text h1 {
+      font-size: 1.375rem;
+      font-weight: 700;
+      color: #F1F5F9;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+
+    .hero-text p {
+      font-size: 0.8125rem;
+      color: #64748B;
+      margin-top: 0.25rem;
+      font-weight: 400;
+    }
+
+    .hero-pill {
+      margin-left: auto;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      border-radius: 20px;
+      padding: 0.3rem 0.9rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #34D399;
+      letter-spacing: 0.03em;
+      white-space: nowrap;
+    }
+
+    /* ── Summary bar ────────────────────────────────────── */
     .summary-bar {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 1rem;
-      margin-bottom: 2rem;
+      margin-bottom: 1.5rem;
     }
 
     .summary-card {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: #0D1929;
+      border: 1px solid rgba(255, 255, 255, 0.07);
       border-radius: 12px;
-      padding: 1.25rem;
-      text-align: center;
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      transition: border-color 0.2s;
     }
+
+    .summary-card:hover {
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    .summary-card-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    .summary-card-icon.green  { background: rgba(16, 185, 129, 0.12); }
+    .summary-card-icon.blue   { background: rgba(59, 130, 246, 0.12); }
+    .summary-card-icon.amber  { background: rgba(251, 191, 36, 0.12); }
+    .summary-card-icon.purple { background: rgba(139, 92, 246, 0.12); }
+
+    .summary-card-body { flex: 1; min-width: 0; }
 
     .summary-card .value {
-      font-size: 1.8rem;
+      font-size: 1.625rem;
       font-weight: 700;
-      color: #4caf50;
+      color: #F1F5F9;
+      letter-spacing: -0.02em;
+      line-height: 1;
     }
+
+    .summary-card .value.green { color: #34D399; }
+    .summary-card .value.red   { color: #F87171; }
 
     .summary-card .label {
-      font-size: 0.8rem;
-      color: #7a9bb5;
-      margin-top: 0.25rem;
+      font-size: 0.72rem;
+      font-weight: 500;
+      color: #4B6A8A;
+      margin-top: 0.35rem;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
     }
 
-    .summary-card .trend {
-      font-size: 0.9rem;
-      margin-top: 0.5rem;
-    }
-
-    .trend.up   { color: #4caf50; }
-    .trend.down { color: #f44336; }
-
+    /* ── Loading / Error ────────────────────────────────── */
     .loading {
       text-align: center;
-      padding: 4rem;
-      color: #7a9bb5;
+      padding: 5rem 2rem;
+      color: #4B6A8A;
     }
 
     .spinner {
-      width: 48px;
-      height: 48px;
-      border: 4px solid rgba(76, 175, 80, 0.2);
-      border-top-color: #4caf50;
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(16, 185, 129, 0.15);
+      border-top-color: #10B981;
       border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 1rem;
+      animation: spin 0.75s linear infinite;
+      margin: 0 auto 1.25rem;
+    }
+
+    .loading p {
+      font-size: 0.875rem;
+      font-weight: 500;
+      letter-spacing: 0.01em;
     }
 
     @keyframes spin { to { transform: rotate(360deg); } }
 
     .error-msg {
-      background: rgba(244, 67, 54, 0.1);
-      border: 1px solid rgba(244, 67, 54, 0.3);
-      border-radius: 8px;
-      padding: 1rem;
-      color: #ef9a9a;
-      text-align: center;
-      margin: 2rem 0;
+      background: rgba(248, 113, 113, 0.07);
+      border: 1px solid rgba(248, 113, 113, 0.2);
+      border-radius: 10px;
+      padding: 0.875rem 1.25rem;
+      color: #FCA5A5;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
     }
+
+    /* ── Footer ─────────────────────────────────────────── */
+    footer {
+      text-align: center;
+      padding: 2rem;
+      color: #1E3A5A;
+      font-size: 0.75rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.04);
+      margin-top: 2rem;
+    }
+
+    footer a {
+      color: #34D399;
+      text-decoration: none;
+    }
+
+    footer a:hover { text-decoration: underline; }
   `;
 
   constructor() {
@@ -207,7 +357,6 @@ class GscApp extends LitElement {
       this.summary = await sumRes.json();
     } catch (err) {
       this.error = err.message || 'Failed to load leaderboard data.';
-      // Load demo data so the UI is still useful without a backend
       this._loadDemoData();
     } finally {
       this.loading = false;
@@ -216,10 +365,10 @@ class GscApp extends LitElement {
 
   _loadDemoData() {
     const teams = [
-      { name: 'Team Alpha', color: '#4CAF50', icon: '🌱' },
-      { name: 'Team Beta',  color: '#2196F3', icon: '💧' },
-      { name: 'Team Gamma', color: '#FF9800', icon: '⚡' },
-      { name: 'Team Delta', color: '#9C27B0', icon: '🚀' },
+      { name: 'Team Alpha', color: '#10B981', icon: '🌱' },
+      { name: 'Team Beta',  color: '#3B82F6', icon: '💧' },
+      { name: 'Team Gamma', color: '#F59E0B', icon: '⚡' },
+      { name: 'Team Delta', color: '#8B5CF6', icon: '🚀' },
     ];
     const baseCo2 = [1240, 2890, 3450, 980];
     this.leaderboard = teams
@@ -275,23 +424,31 @@ class GscApp extends LitElement {
 
   render() {
     const s = this.summary;
+    const reductionGood = s?.reductionPercent != null && s.reductionPercent >= 0;
+
     return html`
       <header>
         <div class="logo">
-          <span class="logo-emoji">🌍</span>
-          <div>
-            <div class="logo-text">Green Software Champions</div>
-            <div class="logo-subtitle">Cloud Carbon Footprint Leaderboard</div>
+          <div class="logo-mark">🌿</div>
+          <div class="logo-text-group">
+            <div class="logo-brand">RET<span>IT</span></div>
+            <div class="logo-subtitle">Green Software Champions</div>
           </div>
         </div>
+
         <nav>
           <button class="nav-btn ${this.activeView === 'leaderboard' ? 'active' : ''}"
-                  @click="${() => { this.activeView = 'leaderboard'; }}">🏆 Leaderboard</button>
+                  @click="${() => { this.activeView = 'leaderboard'; }}">
+            🏆 Leaderboard
+          </button>
           <button class="nav-btn ${this.activeView === 'map' ? 'active' : ''}"
-                  @click="${() => { this.activeView = 'map'; }}">🗺️ World Map</button>
+                  @click="${() => { this.activeView = 'map'; }}">
+            🗺️ World Map
+          </button>
         </nav>
+
         <div class="period-selector">
-          <label for="period">Period:</label>
+          <label for="period">Period</label>
           <input type="month" id="period" .value="${this.period}"
                  @change="${this._onPeriodChange}" />
         </div>
@@ -307,31 +464,55 @@ class GscApp extends LitElement {
 
         ${this.error ? html`
           <div class="error-msg">
-            ⚠️ ${this.error} — Showing demo data.
+            <span>⚠️</span>
+            <span>${this.error} — Showing demo data.</span>
           </div>
         ` : ''}
+
+        <div class="hero-band">
+          <span class="hero-icon">🌍</span>
+          <div class="hero-text">
+            <h1>Cloud Carbon Footprint Leaderboard</h1>
+            <p>Track and reduce your team's cloud CO₂ emissions. Compete, improve, and champion sustainable software.</p>
+          </div>
+          <div class="hero-pill">🟢 Live</div>
+        </div>
 
         ${s ? html`
           <div class="summary-bar">
             <div class="summary-card">
-              <div class="value">${this._formatCo2(s.totalCo2Kg)}</div>
-              <div class="label">Total Company CO₂e</div>
-            </div>
-            <div class="summary-card">
-              <div class="value ${s.reductionPercent != null ? (s.reductionPercent >= 0 ? 'up' : 'down') : ''}">
-                ${s.reductionPercent != null
-                  ? `${s.reductionPercent >= 0 ? '↓' : '↑'} ${Math.abs(s.reductionPercent).toFixed(1)}%`
-                  : '—'}
+              <div class="summary-card-icon green">🌫️</div>
+              <div class="summary-card-body">
+                <div class="value">${this._formatCo2(s.totalCo2Kg)}</div>
+                <div class="label">Total Company CO₂e</div>
               </div>
-              <div class="label">vs. Previous Period</div>
             </div>
             <div class="summary-card">
-              <div class="value">${s.teamCount}</div>
-              <div class="label">Teams Competing</div>
+              <div class="summary-card-icon ${reductionGood ? 'green' : 'blue'}">
+                ${reductionGood ? '📉' : '📈'}
+              </div>
+              <div class="summary-card-body">
+                <div class="value ${s.reductionPercent != null ? (s.reductionPercent >= 0 ? 'green' : 'red') : ''}">
+                  ${s.reductionPercent != null
+                    ? `${s.reductionPercent >= 0 ? '↓' : '↑'} ${Math.abs(s.reductionPercent).toFixed(1)}%`
+                    : '—'}
+                </div>
+                <div class="label">vs. Previous Period</div>
+              </div>
             </div>
             <div class="summary-card">
-              <div class="value">${this.period}</div>
-              <div class="label">Current Period</div>
+              <div class="summary-card-icon amber">👥</div>
+              <div class="summary-card-body">
+                <div class="value">${s.teamCount}</div>
+                <div class="label">Teams Competing</div>
+              </div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-card-icon purple">📅</div>
+              <div class="summary-card-body">
+                <div class="value" style="font-size:1.1rem">${this.period}</div>
+                <div class="label">Current Period</div>
+              </div>
             </div>
           </div>
         ` : ''}
@@ -348,6 +529,11 @@ class GscApp extends LitElement {
           </gsc-world-map>
         `}
       </main>
+
+      <footer>
+        Powered by <a href="https://www.retit.io" target="_blank" rel="noopener">retit.io</a>
+        &nbsp;·&nbsp; Green Software Champions &nbsp;·&nbsp; Cloud Carbon Footprint Tracking
+      </footer>
     `;
   }
 }
