@@ -23,30 +23,30 @@ public class CarbonEntry extends PanacheEntity {
     public String period;
 
     /** Total CO2-equivalent emissions in kg for this period. */
-    @Column(name = "total_co2_kg")
+    @Column(name = "total_co2_kg", columnDefinition = "NUMERIC(20,4)")
     public Double totalCo2Kg;
 
     /** CO2-equivalent emissions in kg from the previous period. */
-    @Column(name = "previous_co2_kg")
+    @Column(name = "previous_co2_kg", columnDefinition = "NUMERIC(20,4)")
     public Double previousCo2Kg;
 
     /**
      * Reduction percentage vs. previous period.
      * Positive = reduction (good), Negative = increase (bad).
      */
-    @Column(name = "reduction_percentage")
+    @Column(name = "reduction_percentage", columnDefinition = "NUMERIC(10,4)")
     public Double reductionPercentage;
 
     @Column(name = "sync_timestamp")
     public Instant syncTimestamp;
 
-    @Column(name = "aws_co2_kg")
+    @Column(name = "aws_co2_kg", columnDefinition = "NUMERIC(20,4)")
     public Double awsCo2Kg;
 
-    @Column(name = "azure_co2_kg")
+    @Column(name = "azure_co2_kg", columnDefinition = "NUMERIC(20,4)")
     public Double azureCo2Kg;
 
-    @Column(name = "gcp_co2_kg")
+    @Column(name = "gcp_co2_kg", columnDefinition = "NUMERIC(20,4)")
     public Double gcpCo2Kg;
 
     public static Optional<CarbonEntry> findByTeamAndPeriod(Team team, String period) {
