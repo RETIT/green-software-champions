@@ -89,6 +89,14 @@ public interface CloudProvidersConfig {
         @WithName("credentials-file")
         Optional<String> credentialsFile();
 
+        /**
+         * Optional: service account key JSON contents provided directly as a string.
+         * This can be supplied via environment variable (e.g. CLOUD_GCP_CREDENTIALS_JSON)
+         * so that no file needs to be mounted. When present, the application will
+         * use these JSON contents to create credentials in-memory.
+         */
+        @WithName("credentials-json")
+        Optional<String> credentialsJson();
         /** GCP billing account ID (e.g., "012345-6789AB-CDEF01"). */
         @WithName("billing-account")
         Optional<String> billingAccount();

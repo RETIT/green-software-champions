@@ -9,6 +9,14 @@ import org.jboss.logging.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.io.ByteArrayInputStream;
+import java.io.FileInputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+
+import com.google.auth.oauth2.AccessToken;
+import com.google.auth.oauth2.GoogleCredentials;
+import com.google.auth.oauth2.ServiceAccountCredentials;
 
 /**
  * GCP Carbon Footprint data provider.
@@ -110,12 +118,33 @@ public class GcpCarbonProvider implements CarbonProvider {
             LOG.debugf("ADC metadata server not available: %s", e.getMessage());
         }
 
-        if (!gcpConfig.credentialsFile().isEmpty()) {
-            LOG.infof("Using GCP service account key file: %s", gcpConfig.credentialsFile().get());
-            // In production, use the Google Auth Library to exchange the service account
-            // key for an access token. Requires adding the google-auth-library-oauth2-http
-            // dependency. The key file path is: gcpConfig.credentialsFile().get()
-            LOG.warn("Service account key file auth not yet implemented; add google-auth-library-oauth2-http.");
+        try {
+            // If the config contains raw JSON credentials, prefer that (no file required)
+            if (!gcpConfig.credentialsJson().isEmpty()) {
+                String json = gcpConfig.credentialsJson().get();
+                LOG.info("Using GCP service account credentials from configuration (JSON).");
+                try (ByteArrayInputStream is = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))) {
+                    GoogleCredentials creds = ServiceAccountCredentials.fromStream(is)
+                            .createScoped(Collections.singleton("https://www.googleapis.com/auth/cloud-platform"));
+                    // Refresh to obtain an access token
+                    AccessToken token = creds.refreshAccessToken();
+                    return token != null ? token.getTokenValue() : null;
+                }
+            }
+
+            // If a credentials file path is configured, load it
+            if (!gcpConfig.credentialsFile().isEmpty()) {
+                String path = gcpConfig.credentialsFile().get();
+                LOG.infof("Using GCP service account key file: %s", path);
+                try (FileInputStream fis = new FileInputStream(path)) {
+                    GoogleCredentials creds = ServiceAccountCredentials.fromStream(fis)
+                            .createScoped(Collections.singleton("https://www.googleapis.com/auth/cloud-platform"));
+                    AccessToken token = creds.refreshAccessToken();
+                    return token != null ? token.getTokenValue() : null;
+                }
+            }
+        } catch (Exception e) {
+            LOG.warnf("Failed to load GCP service account credentials: %s", e.getMessage());
         }
         return null;
     }
