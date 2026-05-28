@@ -23,10 +23,10 @@ quarkus:
     password: ${DB_PASSWORD:postgres}
 
   hibernate-orm:
-    database:
-      generation: none
     log:
       sql: false
+    schema-management:
+      strategy:
 
   # ---------------------------------------------------------------------------
   # Flyway – database migrations
