@@ -33,7 +33,7 @@ jobs:
 
     strategy:
       matrix:
-        java: [ "17" ]   # extend to [17, 21] to test multiple JDK versions
+        java: [ "25" ]   # currently pinned to JDK 25; extend this list to test multiple JDK versions
 
     steps:
       - name: Checkout
@@ -72,10 +72,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Set up JDK 25
         uses: actions/setup-java@v4
         with:
-          java-version: "17"
+          java-version: "25"
           distribution: temurin
           cache: maven
 
