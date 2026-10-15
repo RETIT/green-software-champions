@@ -1,4 +1,4 @@
-import { LitElement, html, css } from 'lit';
+import {LitElement, html, css, svg} from 'lit';
 
 /**
  * World map visualization component.
@@ -234,16 +234,16 @@ class GscWorldMap extends LitElement {
   }
 
   _renderMapPaths() {
-    return html`
+    return svg`
       <rect class="ocean" x="0" y="0" width="960" height="500" />
       <g class="graticule">
         ${[80, 60, 40, 20, 0, -20, -40, -60, -80].map(lat => {
           const y = (90 - lat) / 180 * 500;
-          return html`<line x1="0" y1="${y}" x2="960" y2="${y}"/>`;
+          return svg`<line x1="0" y1="${y}" x2="960" y2="${y}"/>`;
         })}
         ${[-160, -120, -80, -40, 0, 40, 80, 120, 160].map(lon => {
           const x = (lon + 180) / 360 * 960;
-          return html`<line x1="${x}" y1="0" x2="${x}" y2="500"/>`;
+          return svg`<line x1="${x}" y1="0" x2="${x}" y2="500"/>`;
         })}
       </g>
       <g class="land">
@@ -285,12 +285,12 @@ class GscWorldMap extends LitElement {
           ${(this.entries || []).map((entry, i) => {
             const pos = this._getPosition(i);
             const r = this._bubbleRadius(entry.companySharePercent);
-            return html`
+            return svg`
               <g class="team-bubble"
                  @mouseenter="${(e) => this._showTooltip(e, entry)}"
                  @mousemove="${(e) => this._showTooltip(e, entry)}"
                  @mouseleave="${this._hideTooltip}">
-                ${i === 0 ? html`
+                ${i === 0 ? svg`
                   <circle class="pulse-ring" cx="${pos.x}" cy="${pos.y}"
                           stroke="${entry.teamColor}" opacity="0.5" r="${r}"/>
                 ` : ''}
