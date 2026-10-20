@@ -1,4 +1,10 @@
-import {LitElement, html, css, svg} from 'lit';
+import { LitElement, html, css, svg } from "lit";
+import {
+  formatCo2,
+  formatPercent,
+  formatReductionPercent,
+  reductionTrend,
+} from "../util/format";
 
 /**
  * World map visualization component.
@@ -6,13 +12,13 @@ import {LitElement, html, css, svg} from 'lit';
 class GscWorldMap extends LitElement {
   static properties = {
     entries: { type: Array },
-    period:  { type: String },
+    period: { type: String },
   };
 
   static styles = css`
     :host {
       display: block;
-      font-family: 'Source Sans 3', 'Source Sans Pro', Helvetica, sans-serif;
+      font-family: "Source Sans 3", "Source Sans Pro", Helvetica, sans-serif;
       font-weight: 300;
     }
 
@@ -98,13 +104,19 @@ class GscWorldMap extends LitElement {
       font-size: 9px;
       text-anchor: middle;
       pointer-events: none;
-      font-family: 'Source Sans 3', 'Source Sans Pro', sans-serif;
+      font-family: "Source Sans 3", "Source Sans Pro", sans-serif;
       font-weight: 600;
     }
 
     @keyframes pulse-ring {
-      0%   { r: 0; opacity: 0.6; }
-      100% { r: 40px; opacity: 0; }
+      0% {
+        r: 0;
+        opacity: 0.6;
+      }
+      100% {
+        r: 40px;
+        opacity: 0;
+      }
     }
 
     .pulse-ring {
@@ -152,9 +164,11 @@ class GscWorldMap extends LitElement {
       box-shadow: 0px 3px 7px 2px rgba(0, 0, 0, 0.12);
     }
 
-    .tooltip.hidden { opacity: 0; }
+    .tooltip.hidden {
+      opacity: 0;
+    }
 
-    .tooltip-name  {
+    .tooltip-name {
       font-weight: 600;
       color: #555;
       margin-bottom: 0.35em;
@@ -176,7 +190,7 @@ class GscWorldMap extends LitElement {
       color: #568139;
     }
 
-    .tooltip-row span.bad {
+    .tooltip-row span.negative {
       color: #c0392b;
     }
   `;
@@ -184,7 +198,7 @@ class GscWorldMap extends LitElement {
   constructor() {
     super();
     this.entries = [];
-    this.period = '';
+    this.period = "";
     this._tooltip = { visible: false, x: 0, y: 0, entry: null };
   }
 
@@ -213,14 +227,8 @@ class GscWorldMap extends LitElement {
     return 12 + (sharePercent / 100) * 38;
   }
 
-  _formatCo2(kg) {
-    if (kg === null || kg === undefined) return '—';
-    if (kg >= 1_000) return `${(kg / 1_000).toFixed(2)} t`;
-    return `${Math.round(kg)} kg`;
-  }
-
   _showTooltip(e, entry) {
-    const container = this.shadowRoot.querySelector('.map-container');
+    const container = this.shadowRoot.querySelector(".map-container");
     const rect = container.getBoundingClientRect();
     const x = e.clientX - rect.left + 12;
     const y = e.clientY - rect.top + 12;
@@ -237,12 +245,12 @@ class GscWorldMap extends LitElement {
     return svg`
       <rect class="ocean" x="0" y="0" width="960" height="500" />
       <g class="graticule">
-        ${[80, 60, 40, 20, 0, -20, -40, -60, -80].map(lat => {
-          const y = (90 - lat) / 180 * 500;
+        ${[80, 60, 40, 20, 0, -20, -40, -60, -80].map((lat) => {
+          const y = ((90 - lat) / 180) * 500;
           return svg`<line x1="0" y1="${y}" x2="960" y2="${y}"/>`;
         })}
-        ${[-160, -120, -80, -40, 0, 40, 80, 120, 160].map(lon => {
-          const x = (lon + 180) / 360 * 960;
+        ${[-160, -120, -80, -40, 0, 40, 80, 120, 160].map((lon) => {
+          const x = ((lon + 180) / 360) * 960;
           return svg`<line x1="${x}" y1="0" x2="${x}" y2="500"/>`;
         })}
       </g>
@@ -281,7 +289,6 @@ class GscWorldMap extends LitElement {
       <div class="map-container" @mouseleave="${this._hideTooltip}">
         <svg viewBox="0 0 960 500" xmlns="http://www.w3.org/2000/svg">
           ${this._renderMapPaths()}
-
           ${(this.entries || []).map((entry, i) => {
             const pos = this._getPosition(i);
             const r = this._bubbleRadius(entry.companySharePercent);
@@ -290,10 +297,14 @@ class GscWorldMap extends LitElement {
                  @mouseenter="${(e) => this._showTooltip(e, entry)}"
                  @mousemove="${(e) => this._showTooltip(e, entry)}"
                  @mouseleave="${this._hideTooltip}">
-                ${i === 0 ? svg`
+                ${
+                  i === 0
+                    ? svg`
                   <circle class="pulse-ring" cx="${pos.x}" cy="${pos.y}"
                           stroke="${entry.teamColor}" opacity="0.5" r="${r}"/>
-                ` : ''}
+                `
+                    : ""
+                }
                 <circle cx="${pos.x}" cy="${pos.y}" r="${r}"
                         fill="${entry.teamColor}"
                         stroke="${entry.teamColor}"
@@ -307,33 +318,45 @@ class GscWorldMap extends LitElement {
           })}
         </svg>
 
-        <div class="tooltip ${t.visible ? '' : 'hidden'}"
-             style="left:${t.x}px;top:${t.y}px">
-          ${t.entry ? html`
-            <div class="tooltip-name">${t.entry.teamIcon} ${t.entry.teamName}</div>
-            <div class="tooltip-row">
-              <span>CO₂e</span>
-              <span>${this._formatCo2(t.entry.totalCo2Kg)}</span>
-            </div>
-            <div class="tooltip-row">
-              <span>Company share</span>
-              <span>${t.entry.companySharePercent != null
-                ? t.entry.companySharePercent.toFixed(1) + '%' : '—'}</span>
-            </div>
-            <div class="tooltip-row">
-              <span>Change</span>
-              <span class="${(t.entry.reductionPercent || 0) >= 0 ? '' : 'bad'}">
-                ${t.entry.reductionPercent != null
-                  ? `${t.entry.reductionPercent >= 0 ? '↓' : '↑'} ${Math.abs(t.entry.reductionPercent).toFixed(1)}%`
-                  : '—'}
-              </span>
-            </div>
-            ${t.entry.achievements && t.entry.achievements.length > 0 ? html`
-              <div class="tooltip-row" style="justify-content:flex-start;gap:0.25em;margin-top:0.3em">
-                ${t.entry.achievements.map(a => html`<span title="${a.title}">${a.badgeIcon}</span>`)}
-              </div>
-            ` : ''}
-          ` : ''}
+        <div
+          class="tooltip ${t.visible ? "" : "hidden"}"
+          style="left:${t.x}px;top:${t.y}px"
+        >
+          ${
+            t.entry
+              ? html`
+                  <div class="tooltip-name">
+                    ${t.entry.teamIcon} ${t.entry.teamName}
+                  </div>
+                  <div class="tooltip-row">
+                    <span>CO₂e</span>
+                    <span>${formatCo2(t.entry.totalCo2Kg)}</span>
+                  </div>
+                  <div class="tooltip-row">
+                    <span>Company share</span>
+                    <span>${formatPercent(t.entry.companySharePercent)}</span>
+                  </div>
+                  <div class="tooltip-row">
+                    <span>Change</span>
+                    <span class="${reductionTrend(t.entry.reductionPercent)}">
+                      ${formatReductionPercent(t.entry.reductionPercent)}
+                    </span>
+                  </div>
+                  ${
+                    t.entry.achievements && t.entry.achievements.length > 0
+                      ? html`
+                          <div
+                            class="tooltip-row"
+                            style="justify-content:flex-start;gap:0.25em;margin-top:0.3em"
+                          >
+                            ${t.entry.achievements.map((a) => html`<span title="${a.title}">${a.badgeIcon}</span>`)}
+                          </div>
+                        `
+                      : ""
+                  }
+                `
+              : ""
+          }
         </div>
       </div>
 
@@ -353,4 +376,4 @@ class GscWorldMap extends LitElement {
   }
 }
 
-customElements.define('gsc-world-map', GscWorldMap);
+customElements.define("gsc-world-map", GscWorldMap);

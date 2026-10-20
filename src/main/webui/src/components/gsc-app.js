@@ -1,4 +1,11 @@
 import { LitElement, html, css } from "lit";
+import {
+  formatCo2,
+  formatReductionPercent,
+  reductionTrend,
+} from "../util/format";
+
+const TREND_ICON = { positive: "📉", negative: "📈", neutral: "➖" };
 
 /**
  * Root application shell — styled to RETIT CI.
@@ -452,19 +459,12 @@ class GscApp extends LitElement {
     this._loadData();
   }
 
-  _formatCo2(kg) {
-    if (kg === null || kg === undefined) return "—";
-    if (kg >= 1_000) return `${(kg / 1_000).toFixed(2)} t`;
-    return `${Math.round(kg)} kg`;
-  }
-
   render() {
     const s = this.summary;
-    const reductionGood =
-      s?.reductionPercent != null && s.reductionPercent >= 0;
+    const trend = reductionTrend(s?.reductionPercent);
 
     return html`
-      <!-- RETIT green navigation bar -->
+      <!-- Navigation Bar -->
       <header>
         <div class="logo">
           <span class="logo-icon">
@@ -576,23 +576,15 @@ class GscApp extends LitElement {
                   <div class="summary-card">
                     <div class="summary-card-icon">🌫️</div>
                     <div class="summary-card-body">
-                      <div class="value">${this._formatCo2(s.totalCo2Kg)}</div>
+                      <div class="value">${formatCo2(s.totalCo2Kg)}</div>
                       <div class="label">Total Company CO₂e</div>
                     </div>
                   </div>
                   <div class="summary-card">
-                    <div class="summary-card-icon">
-                      ${reductionGood ? "📉" : "📈"}
-                    </div>
+                    <div class="summary-card-icon">${TREND_ICON[trend]}</div>
                     <div class="summary-card-body">
-                      <div
-                        class="value ${s.reductionPercent != null ? (s.reductionPercent >= 0 ? "positive" : "negative") : ""}"
-                      >
-                        ${
-                          s.reductionPercent != null
-                            ? `${s.reductionPercent >= 0 ? "↓" : "↑"} ${Math.abs(s.reductionPercent).toFixed(1)}%`
-                            : "—"
-                        }
+                      <div class="value ${trend}">
+                        ${formatReductionPercent(s.reductionPercent)}
                       </div>
                       <div class="label">vs. Previous Period</div>
                     </div>

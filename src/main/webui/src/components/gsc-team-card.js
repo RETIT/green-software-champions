@@ -1,4 +1,10 @@
-import { LitElement, html, css } from 'lit';
+import { LitElement, html, css } from "lit";
+import {
+  formatCo2,
+  formatPercent,
+  formatReductionPercent,
+  reductionTrend,
+} from "../util/format";
 
 class GscTeamCard extends LitElement {
   static properties = {
@@ -9,7 +15,7 @@ class GscTeamCard extends LitElement {
   static styles = css`
     :host {
       display: block;
-      font-family: 'Source Sans 3', 'Source Sans Pro', Helvetica, sans-serif;
+      font-family: "Source Sans 3", "Source Sans Pro", Helvetica, sans-serif;
       font-weight: 300;
     }
 
@@ -20,16 +26,19 @@ class GscTeamCard extends LitElement {
       box-shadow: 0px 3px 10px 3px rgba(0, 0, 0, 0.08);
       padding: 1em 1.5em;
       cursor: pointer;
-      transition: box-shadow 0.2s ease, transform 0.2s ease;
+      transition:
+        box-shadow 0.2s ease,
+        transform 0.2s ease;
       position: relative;
       overflow: hidden;
     }
 
     /* top accent bar that expands on hover */
     .card::before {
-      content: '';
+      content: "";
       position: absolute;
-      top: 0; left: 0;
+      top: 0;
+      left: 0;
       height: 3px;
       width: 0;
       background: #568139;
@@ -41,12 +50,23 @@ class GscTeamCard extends LitElement {
       transform: scale(1.005);
     }
 
-    .card:hover::before { width: 100%; }
+    .card:hover::before {
+      width: 100%;
+    }
 
     /* Rank-specific top color */
-    .card.rank-1::before { background: #d4ac0d; width: 100%; }
-    .card.rank-2::before { background: #808080; width: 100%; }
-    .card.rank-3::before { background: #a0522d; width: 100%; }
+    .card.rank-1::before {
+      background: #d4ac0d;
+      width: 100%;
+    }
+    .card.rank-2::before {
+      background: #808080;
+      width: 100%;
+    }
+    .card.rank-3::before {
+      background: #a0522d;
+      width: 100%;
+    }
 
     /* ── Top row ────────────────────────────────────────── */
     .top-row {
@@ -71,9 +91,21 @@ class GscTeamCard extends LitElement {
       border: 1px solid rgba(144, 144, 144, 0.3);
     }
 
-    .rank-1 .rank-badge { background: rgba(212, 172, 13, 0.1); color: #9a7b00; border-color: rgba(212,172,13,0.35); }
-    .rank-2 .rank-badge { background: rgba(128, 128, 128, 0.1); color: #555; border-color: rgba(128,128,128,0.3); }
-    .rank-3 .rank-badge { background: rgba(160, 82, 45, 0.1);  color: #7a3b1a; border-color: rgba(160,82,45,0.3); }
+    .rank-1 .rank-badge {
+      background: rgba(212, 172, 13, 0.1);
+      color: #9a7b00;
+      border-color: rgba(212, 172, 13, 0.35);
+    }
+    .rank-2 .rank-badge {
+      background: rgba(128, 128, 128, 0.1);
+      color: #555;
+      border-color: rgba(128, 128, 128, 0.3);
+    }
+    .rank-3 .rank-badge {
+      background: rgba(160, 82, 45, 0.1);
+      color: #7a3b1a;
+      border-color: rgba(160, 82, 45, 0.3);
+    }
 
     .team-icon {
       font-size: 1.6em;
@@ -81,7 +113,10 @@ class GscTeamCard extends LitElement {
       line-height: 1;
     }
 
-    .team-info { flex: 1; min-width: 0; }
+    .team-info {
+      flex: 1;
+      min-width: 0;
+    }
 
     .team-name {
       font-size: 1em;
@@ -106,7 +141,9 @@ class GscTeamCard extends LitElement {
       align-items: center;
     }
 
-    .metric { text-align: right; }
+    .metric {
+      text-align: right;
+    }
 
     .metric .value {
       font-size: 1.05em;
@@ -123,9 +160,15 @@ class GscTeamCard extends LitElement {
       font-weight: 400;
     }
 
-    .reduction.positive { color: #568139; }
-    .reduction.negative { color: #c0392b; }
-    .reduction.neutral  { color: #999; }
+    .reduction.positive {
+      color: #568139;
+    }
+    .reduction.negative {
+      color: #c0392b;
+    }
+    .reduction.neutral {
+      color: #999;
+    }
 
     /* Achievements */
     .achievements {
@@ -141,7 +184,9 @@ class GscTeamCard extends LitElement {
       flex-shrink: 0;
     }
 
-    .chevron.open { transform: rotate(180deg); }
+    .chevron.open {
+      transform: rotate(180deg);
+    }
 
     /* ── Expanded section ───────────────────────────────── */
     .expand-section {
@@ -174,7 +219,9 @@ class GscTeamCard extends LitElement {
       border-radius: 3px;
       padding: 0.65em 0.75em;
       text-align: center;
-      transition: border-color 0.15s, box-shadow 0.15s;
+      transition:
+        border-color 0.15s,
+        box-shadow 0.15s;
     }
 
     .provider-chip:hover {
@@ -231,33 +278,21 @@ class GscTeamCard extends LitElement {
     this.expanded = false;
   }
 
-  _formatCo2(kg) {
-    if (kg === null || kg === undefined) return '—';
-    if (kg >= 1_000) return `${(kg / 1_000).toFixed(2)} t`;
-    return `${Math.round(kg)} kg`;
-  }
-
-  _reductionClass(pct) {
-    if (pct === null || pct === undefined) return 'neutral';
-    return pct >= 0 ? 'positive' : 'negative';
-  }
-
-  _reductionLabel(pct) {
-    if (pct === null || pct === undefined) return '—';
-    const sign = pct >= 0 ? '↓' : '↑';
-    return `${sign} ${Math.abs(pct).toFixed(1)}%`;
-  }
-
   render() {
     const e = this.entry;
     if (!e) return html``;
-    const rankClass = e.rank <= 3 ? `rank-${e.rank}` : '';
+    const rankClass = e.rank <= 3 ? `rank-${e.rank}` : "";
 
     return html`
-      <div class="card ${rankClass}" @click="${() => { this.expanded = !this.expanded; }}">
+      <div
+        class="card ${rankClass}"
+        @click="${() => {
+          this.expanded = !this.expanded;
+        }}"
+      >
         <div class="top-row">
           <div class="rank-badge">${e.rank}</div>
-          <div class="team-icon">${e.teamIcon || '🌍'}</div>
+          <div class="team-icon">${e.teamIcon || "🌍"}</div>
           <div class="team-info">
             <div class="team-name">${e.teamName}</div>
             <div class="team-color-bar" style="background:${e.teamColor}"></div>
@@ -265,80 +300,102 @@ class GscTeamCard extends LitElement {
 
           <div class="metrics">
             <div class="metric">
-              <div class="value">${this._formatCo2(e.totalCo2Kg)}</div>
+              <div class="value">${formatCo2(e.totalCo2Kg)}</div>
               <div class="label">CO₂e Total</div>
             </div>
             <div class="metric">
-              <div class="value reduction ${this._reductionClass(e.reductionPercent)}">
-                ${this._reductionLabel(e.reductionPercent)}
+              <div
+                class="value reduction ${reductionTrend(e.reductionPercent)}"
+              >
+                ${formatReductionPercent(e.reductionPercent)}
               </div>
               <div class="label">vs. Prev Period</div>
             </div>
             <div class="metric">
-              <div class="value">
-                ${e.companySharePercent != null ? e.companySharePercent.toFixed(1) + '%' : '—'}
-              </div>
+              <div class="value">${formatPercent(e.companySharePercent)}</div>
               <div class="label">Company Share</div>
             </div>
           </div>
 
           <div class="achievements">
-            ${(e.achievements || []).slice(0, 3).map(a => html`
-              <gsc-achievement-badge .achievement="${a}" compact></gsc-achievement-badge>
-            `)}
+            ${(e.achievements || [])
+              .slice(0, 3)
+              .map(
+                (a) => html`
+                  <gsc-achievement-badge
+                    .achievement="${a}"
+                    compact
+                  ></gsc-achievement-badge>
+                `,
+              )}
           </div>
 
-          <span class="chevron ${this.expanded ? 'open' : ''}">▼</span>
+          <span class="chevron ${this.expanded ? "open" : ""}">▼</span>
         </div>
 
-        ${this.expanded ? html`
-          <div class="expand-section">
-            <div>
-              <div class="expand-label">Company share of cloud emissions</div>
-              <div class="share-bar-label">
-                <span>Cloud carbon share</span>
-                <span>${e.companySharePercent != null ? e.companySharePercent.toFixed(2) + '%' : '—'}</span>
-              </div>
-              <div class="share-bar-track">
-                <div class="share-bar-fill"
-                     style="width:${Math.min(e.companySharePercent || 0, 100)}%;background:${e.teamColor}">
-                </div>
-              </div>
-            </div>
+        ${
+          this.expanded
+            ? html`
+                <div class="expand-section">
+                  <div>
+                    <div class="expand-label">
+                      Company share of cloud emissions
+                    </div>
+                    <div class="share-bar-label">
+                      <span>Cloud carbon share</span>
+                      <span>${formatPercent(e.companySharePercent, 2)}</span>
+                    </div>
+                    <div class="share-bar-track">
+                      <div
+                        class="share-bar-fill"
+                        style="width:${Math.min(e.companySharePercent || 0, 100)}%;background:${e.teamColor}"
+                      ></div>
+                    </div>
+                  </div>
 
-            <div>
-              <div class="expand-label">Provider Breakdown</div>
-              <div class="provider-breakdown">
-                <div class="provider-chip">
-                  <div class="pname">☁️ AWS</div>
-                  <div class="pvalue">${this._formatCo2(e.awsCo2Kg)}</div>
-                </div>
-                <div class="provider-chip">
-                  <div class="pname">🔷 Azure</div>
-                  <div class="pvalue">${this._formatCo2(e.azureCo2Kg)}</div>
-                </div>
-                <div class="provider-chip">
-                  <div class="pname">🟡 GCP</div>
-                  <div class="pvalue">${this._formatCo2(e.gcpCo2Kg)}</div>
-                </div>
-              </div>
-            </div>
+                  <div>
+                    <div class="expand-label">Provider Breakdown</div>
+                    <div class="provider-breakdown">
+                      <div class="provider-chip">
+                        <div class="pname">☁️ AWS</div>
+                        <div class="pvalue">${formatCo2(e.awsCo2Kg)}</div>
+                      </div>
+                      <div class="provider-chip">
+                        <div class="pname">🔷 Azure</div>
+                        <div class="pvalue">${formatCo2(e.azureCo2Kg)}</div>
+                      </div>
+                      <div class="provider-chip">
+                        <div class="pname">🟡 GCP</div>
+                        <div class="pvalue">${formatCo2(e.gcpCo2Kg)}</div>
+                      </div>
+                    </div>
+                  </div>
 
-            ${e.achievements && e.achievements.length > 0 ? html`
-              <div>
-                <div class="expand-label">🏅 Achievements</div>
-                <div style="display:flex;gap:0.5em;flex-wrap:wrap">
-                  ${e.achievements.map(a => html`
-                    <gsc-achievement-badge .achievement="${a}"></gsc-achievement-badge>
-                  `)}
+                  ${
+                    e.achievements && e.achievements.length > 0
+                      ? html`
+                          <div>
+                            <div class="expand-label">🏅 Achievements</div>
+                            <div style="display:flex;gap:0.5em;flex-wrap:wrap">
+                              ${e.achievements.map(
+                                (a) => html`
+                                  <gsc-achievement-badge
+                                    .achievement="${a}"
+                                  ></gsc-achievement-badge>
+                                `,
+                              )}
+                            </div>
+                          </div>
+                        `
+                      : ""
+                  }
                 </div>
-              </div>
-            ` : ''}
-          </div>
-        ` : ''}
+              `
+            : ""
+        }
       </div>
     `;
   }
 }
 
-customElements.define('gsc-team-card', GscTeamCard);
+customElements.define("gsc-team-card", GscTeamCard);
