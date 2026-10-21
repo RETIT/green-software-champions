@@ -34,6 +34,326 @@ export class GscApp extends LitElement {
   @property({ type: String }) period = this._currentPeriod();
   @property({ type: String }) activeView: View = "leaderboard";
 
+  /**
+   * Reruns whenever `period` changes. A new run aborts the in-flight fetches
+   * of the previous one, and results of superseded runs are discarded.
+   */
+  private _dataTask = new Task(this, {
+    task: async ([period], { signal }): Promise<LeaderboardData> => {
+      const query = `period=${encodeURIComponent(period)}`;
+      try {
+        const [lbRes, sumRes] = await Promise.all([
+          fetch(`/api/leaderboard?${query}`, { signal }),
+          fetch(`/api/leaderboard/summary?${query}`, { signal }),
+        ]);
+        if (!lbRes.ok)
+          throw new Error(`Leaderboard fetch failed: ${lbRes.status}`);
+        if (!sumRes.ok)
+          throw new Error(`Summary fetch failed: ${sumRes.status}`);
+        return {
+          leaderboard: await lbRes.json(),
+          summary: await sumRes.json(),
+          error: null,
+        };
+      } catch (err) {
+        signal.throwIfAborted();
+        return {
+          ...this._demoData(period),
+          error:
+            (err instanceof Error && err.message) ||
+            "Failed to load leaderboard data.",
+        };
+      }
+    },
+    args: () => [this.period] as const,
+  });
+
+  private _currentPeriod(): string {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  }
+
+  private _demoData(
+    period: string,
+  ): Pick<LeaderboardData, "leaderboard" | "summary"> {
+    const teams = [
+      { name: "Team Alpha", color: "#75b729", icon: "🌱" },
+      { name: "Team Beta", color: "#3b8ecf", icon: "💧" },
+      { name: "Team Gamma", color: "#e09c1a", icon: "⚡" },
+      { name: "Team Delta", color: "#8b5cf6", icon: "🚀" },
+    ];
+    const baseCo2 = [1240, 2890, 3450, 980];
+    const earnedAt = new Date().toISOString();
+    const ranked = teams
+      .map((t, i): LeaderboardEntry => ({
+        teamId: i + 1,
+        teamName: t.name,
+        teamColor: t.color,
+        teamIcon: t.icon,
+        rank: 0,
+        period,
+        totalCo2Kg: baseCo2[i],
+        previousCo2Kg: baseCo2[i] * (1 + (Math.random() * 0.3 - 0.1)),
+        reductionPercent: Math.random() * 30 - 5,
+        awsCo2Kg: baseCo2[i] * 0.4,
+        azureCo2Kg: baseCo2[i] * 0.35,
+        gcpCo2Kg: baseCo2[i] * 0.25,
+        companySharePercent: 0,
+        achievements:
+          i === 0
+            ? [
+                {
+                  id: 1,
+                  title: "Carbon Neutral Pioneer",
+                  description: null,
+                  badgeIcon: "🌍",
+                  earnedAt,
+                  type: "FIRST_NET_ZERO",
+                },
+                {
+                  id: 2,
+                  title: "Reduction Champion",
+                  description: null,
+                  badgeIcon: "🏆",
+                  earnedAt,
+                  type: "HIGHEST_REDUCTION",
+                },
+              ]
+            : i === 3
+              ? [
+                  {
+                    id: 3,
+                    title: "Leaderboard Leader",
+                    description: null,
+                    badgeIcon: "🥇",
+                    earnedAt,
+                    type: "LEADERBOARD_LEADER",
+                  },
+                ]
+              : [],
+      }))
+      .sort(
+        (a, b) =>
+          (a.totalCo2Kg ?? Number.MAX_VALUE) -
+          (b.totalCo2Kg ?? Number.MAX_VALUE),
+      )
+      .map((t, i) => ({ ...t, rank: i + 1 }));
+
+    const total = ranked.reduce((s, t) => s + (t.totalCo2Kg || 0), 0);
+    const prevTotal = ranked.reduce((s, t) => s + (t.previousCo2Kg || 0), 0);
+    return {
+      leaderboard: ranked.map((t) => ({
+        ...t,
+        companySharePercent:
+          total > 0 && t.totalCo2Kg !== null
+            ? (t.totalCo2Kg / total) * 100
+            : null,
+      })),
+      summary: {
+        period,
+        totalCo2Kg: total,
+        previousTotalCo2Kg: prevTotal,
+        reductionPercent:
+          prevTotal > 0 ? ((prevTotal - total) / prevTotal) * 100 : null,
+        teamCount: teams.length,
+      },
+    };
+  }
+
+  private _onPeriodChange(e: Event) {
+    const input = e.target as HTMLInputElement;
+    // A cleared month input yields "", which is not a valid period.
+    if (!input.value) {
+      input.value = this.period;
+      return;
+    }
+    // Setting the period reruns the data task.
+    this.period = input.value;
+  }
+
+  private _renderContent({ leaderboard, summary: s, error }: LeaderboardData) {
+    const trend = reductionTrend(s.reductionPercent);
+
+    return html`
+      ${
+        error
+          ? html`
+              <div class="error-msg">
+                <span>⚠️</span>
+                <span>${error} — Showing demo data.</span>
+              </div>
+            `
+          : ""
+      }
+      <div class="summary-bar">
+        <div class="summary-card">
+          <div class="summary-card-icon">🌫️</div>
+          <div class="summary-card-body">
+            <div class="value">${formatCo2(s.totalCo2Kg)}</div>
+            <div class="label">Total Company CO₂e</div>
+          </div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-card-icon">${TREND_ICON[trend]}</div>
+          <div class="summary-card-body">
+            <div class="value ${trend}">
+              ${formatReductionPercent(s.reductionPercent)}
+            </div>
+            <div class="label">vs. Previous Period</div>
+          </div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-card-icon">👥</div>
+          <div class="summary-card-body">
+            <div class="value">${s.teamCount}</div>
+            <div class="label">Teams Competing</div>
+          </div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-card-icon">📅</div>
+          <div class="summary-card-body">
+            <div class="value" style="font-size:1.1em">${this.period}</div>
+            <div class="label">Current Period</div>
+          </div>
+        </div>
+      </div>
+      ${
+        this.activeView === "leaderboard"
+          ? html`
+              <gsc-leaderboard
+                .entries="${leaderboard}"
+                .period="${this.period}"
+              >
+              </gsc-leaderboard>
+            `
+          : html`
+              <gsc-world-map .entries="${leaderboard}" .period="${this.period}">
+              </gsc-world-map>
+            `
+      }
+    `;
+  }
+
+  override render() {
+    return html`
+      <!-- Navigation Bar -->
+      <header>
+        <div class="logo">
+          <span class="logo-icon">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="105px"
+              height="32px"
+              class="logo-mark"
+              viewBox="0 0 548.46 167.22"
+              role="img"
+              aria-label="RETIT"
+              focusable="false"
+            >
+              <path
+                fill="#a7a9ac"
+                stroke="#a7a9ac"
+                stroke-width="15"
+                stroke-linejoin="miter"
+                stroke-miterlimit="10"
+                d="M494.23 159.6H468.89V31.19l-90.56-.18V7.54l162.5.17V31.19h-46.6V159.6zM405.93 159.19H380.58V57.51h25.35V73.23v85.96z"
+              ></path>
+              <path
+                fill="#71bf44"
+                stroke="#71bf44"
+                stroke-width="15"
+                stroke-linejoin="miter"
+                stroke-miterlimit="10"
+                d="M31.12 75.09H60.49C69.01 75.09 75.34 73.01 79.5 68.85 83.66 64.7 85.74 58.99 85.74 51.72c0-6.68-2.05-12.07-6.14-16.19C75.5 31.41 69.77 29.35 62.41 29.35H31.12V75.09zm118.02 84.19H124.18L64.34 97.01H31.12v62.42H7.5V7.54H64.34c15.8.0 27.42 4.14 34.84 12.41C106.61 28.22 110.32 38.92 110.32 52.05 110.32 71.56 102.45 84.99 86.7 92.33l62.44 66.95zM233.15 159.43H148V7.54h84.29V30.13H171.62V71.3h48.76V93.33H171.62v42.51h61.53v23.59zm86.31.0H294.11V31.02H186.63V7.54H366.31V31.02H319.46V159.43z"
+              ></path>
+            </svg>
+          </span>
+          <span class="logo-text">
+            <span class="logo-sep">|</span>
+            <span class="logo-sub">Green Software Champions</span>
+          </span>
+        </div>
+
+        <nav>
+          <button
+            class="nav-btn ${this.activeView === "leaderboard" ? "active" : ""}"
+            @click="${() => {
+              this.activeView = "leaderboard";
+            }}"
+          >
+            🏆 Leaderboard
+          </button>
+          <button
+            class="nav-btn ${this.activeView === "map" ? "active" : ""}"
+            @click="${() => {
+              this.activeView = "map";
+            }}"
+          >
+            🗺️ World Map
+          </button>
+        </nav>
+
+        <div class="period-selector">
+          <label for="period">Period</label>
+          <input
+            type="month"
+            id="period"
+            .value="${this.period}"
+            @change="${this._onPeriodChange}"
+          />
+        </div>
+      </header>
+
+      <!-- Hero -->
+      <div class="hero">
+        <div class="hero-inner">
+          <div class="hero-text">
+            <h1>
+              We track cloud carbon footprints,<br />
+              <span>across all your teams</span>
+            </h1>
+            <p>
+              Compete, reduce and champion sustainable software engineering with
+              RETIT Green Software Champions.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <main>
+        ${this._dataTask.render({
+          pending: () => html`
+            <div class="loading">
+              <div class="spinner"></div>
+              <p>Loading carbon data…</p>
+            </div>
+          `,
+          complete: (data) => this._renderContent(data),
+          error: (err) => html`
+            <div class="error-msg">
+              <span>⚠️</span>
+              <span>
+                ${
+                  (err instanceof Error && err.message) ||
+                  "Failed to load leaderboard data."
+                }
+              </span>
+            </div>
+          `,
+        })}
+      </main>
+
+      <footer>
+        Powered by
+        <a href="https://www.retit.io" target="_blank" rel="noopener"
+          >RETIT GmbH</a
+        >
+        &nbsp;·&nbsp; Green Software Champions &nbsp;·&nbsp; Cloud Carbon
+        Footprint Tracking
+      </footer>
+    `;
+  }
+
   static override styles = css`
     :host {
       display: block;
@@ -354,326 +674,6 @@ export class GscApp extends LitElement {
       border-bottom-color: transparent;
     }
   `;
-
-  /**
-   * Reruns whenever `period` changes. A new run aborts the in-flight fetches
-   * of the previous one, and results of superseded runs are discarded.
-   */
-  private _dataTask = new Task(this, {
-    task: async ([period], { signal }): Promise<LeaderboardData> => {
-      const query = `period=${encodeURIComponent(period)}`;
-      try {
-        const [lbRes, sumRes] = await Promise.all([
-          fetch(`/api/leaderboard?${query}`, { signal }),
-          fetch(`/api/leaderboard/summary?${query}`, { signal }),
-        ]);
-        if (!lbRes.ok)
-          throw new Error(`Leaderboard fetch failed: ${lbRes.status}`);
-        if (!sumRes.ok)
-          throw new Error(`Summary fetch failed: ${sumRes.status}`);
-        return {
-          leaderboard: await lbRes.json(),
-          summary: await sumRes.json(),
-          error: null,
-        };
-      } catch (err) {
-        signal.throwIfAborted();
-        return {
-          ...this._demoData(period),
-          error:
-            (err instanceof Error && err.message) ||
-            "Failed to load leaderboard data.",
-        };
-      }
-    },
-    args: () => [this.period] as const,
-  });
-
-  private _currentPeriod(): string {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-  }
-
-  private _demoData(
-    period: string,
-  ): Pick<LeaderboardData, "leaderboard" | "summary"> {
-    const teams = [
-      { name: "Team Alpha", color: "#75b729", icon: "🌱" },
-      { name: "Team Beta", color: "#3b8ecf", icon: "💧" },
-      { name: "Team Gamma", color: "#e09c1a", icon: "⚡" },
-      { name: "Team Delta", color: "#8b5cf6", icon: "🚀" },
-    ];
-    const baseCo2 = [1240, 2890, 3450, 980];
-    const earnedAt = new Date().toISOString();
-    const ranked = teams
-      .map((t, i): LeaderboardEntry => ({
-        teamId: i + 1,
-        teamName: t.name,
-        teamColor: t.color,
-        teamIcon: t.icon,
-        rank: 0,
-        period,
-        totalCo2Kg: baseCo2[i],
-        previousCo2Kg: baseCo2[i] * (1 + (Math.random() * 0.3 - 0.1)),
-        reductionPercent: Math.random() * 30 - 5,
-        awsCo2Kg: baseCo2[i] * 0.4,
-        azureCo2Kg: baseCo2[i] * 0.35,
-        gcpCo2Kg: baseCo2[i] * 0.25,
-        companySharePercent: 0,
-        achievements:
-          i === 0
-            ? [
-                {
-                  id: 1,
-                  title: "Carbon Neutral Pioneer",
-                  description: null,
-                  badgeIcon: "🌍",
-                  earnedAt,
-                  type: "FIRST_NET_ZERO",
-                },
-                {
-                  id: 2,
-                  title: "Reduction Champion",
-                  description: null,
-                  badgeIcon: "🏆",
-                  earnedAt,
-                  type: "HIGHEST_REDUCTION",
-                },
-              ]
-            : i === 3
-              ? [
-                  {
-                    id: 3,
-                    title: "Leaderboard Leader",
-                    description: null,
-                    badgeIcon: "🥇",
-                    earnedAt,
-                    type: "LEADERBOARD_LEADER",
-                  },
-                ]
-              : [],
-      }))
-      .sort(
-        (a, b) =>
-          (a.totalCo2Kg ?? Number.MAX_VALUE) -
-          (b.totalCo2Kg ?? Number.MAX_VALUE),
-      )
-      .map((t, i) => ({ ...t, rank: i + 1 }));
-
-    const total = ranked.reduce((s, t) => s + (t.totalCo2Kg || 0), 0);
-    const prevTotal = ranked.reduce((s, t) => s + (t.previousCo2Kg || 0), 0);
-    return {
-      leaderboard: ranked.map((t) => ({
-        ...t,
-        companySharePercent:
-          total > 0 && t.totalCo2Kg !== null
-            ? (t.totalCo2Kg / total) * 100
-            : null,
-      })),
-      summary: {
-        period,
-        totalCo2Kg: total,
-        previousTotalCo2Kg: prevTotal,
-        reductionPercent:
-          prevTotal > 0 ? ((prevTotal - total) / prevTotal) * 100 : null,
-        teamCount: teams.length,
-      },
-    };
-  }
-
-  private _onPeriodChange(e: Event) {
-    const input = e.target as HTMLInputElement;
-    // A cleared month input yields "", which is not a valid period.
-    if (!input.value) {
-      input.value = this.period;
-      return;
-    }
-    // Setting the period reruns the data task.
-    this.period = input.value;
-  }
-
-  private _renderContent({ leaderboard, summary: s, error }: LeaderboardData) {
-    const trend = reductionTrend(s.reductionPercent);
-
-    return html`
-      ${
-        error
-          ? html`
-              <div class="error-msg">
-                <span>⚠️</span>
-                <span>${error} — Showing demo data.</span>
-              </div>
-            `
-          : ""
-      }
-      <div class="summary-bar">
-        <div class="summary-card">
-          <div class="summary-card-icon">🌫️</div>
-          <div class="summary-card-body">
-            <div class="value">${formatCo2(s.totalCo2Kg)}</div>
-            <div class="label">Total Company CO₂e</div>
-          </div>
-        </div>
-        <div class="summary-card">
-          <div class="summary-card-icon">${TREND_ICON[trend]}</div>
-          <div class="summary-card-body">
-            <div class="value ${trend}">
-              ${formatReductionPercent(s.reductionPercent)}
-            </div>
-            <div class="label">vs. Previous Period</div>
-          </div>
-        </div>
-        <div class="summary-card">
-          <div class="summary-card-icon">👥</div>
-          <div class="summary-card-body">
-            <div class="value">${s.teamCount}</div>
-            <div class="label">Teams Competing</div>
-          </div>
-        </div>
-        <div class="summary-card">
-          <div class="summary-card-icon">📅</div>
-          <div class="summary-card-body">
-            <div class="value" style="font-size:1.1em">${this.period}</div>
-            <div class="label">Current Period</div>
-          </div>
-        </div>
-      </div>
-      ${
-        this.activeView === "leaderboard"
-          ? html`
-              <gsc-leaderboard
-                .entries="${leaderboard}"
-                .period="${this.period}"
-              >
-              </gsc-leaderboard>
-            `
-          : html`
-              <gsc-world-map .entries="${leaderboard}" .period="${this.period}">
-              </gsc-world-map>
-            `
-      }
-    `;
-  }
-
-  override render() {
-    return html`
-      <!-- Navigation Bar -->
-      <header>
-        <div class="logo">
-          <span class="logo-icon">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="105px"
-              height="32px"
-              class="logo-mark"
-              viewBox="0 0 548.46 167.22"
-              role="img"
-              aria-label="RETIT"
-              focusable="false"
-            >
-              <path
-                fill="#a7a9ac"
-                stroke="#a7a9ac"
-                stroke-width="15"
-                stroke-linejoin="miter"
-                stroke-miterlimit="10"
-                d="M494.23 159.6H468.89V31.19l-90.56-.18V7.54l162.5.17V31.19h-46.6V159.6zM405.93 159.19H380.58V57.51h25.35V73.23v85.96z"
-              ></path>
-              <path
-                fill="#71bf44"
-                stroke="#71bf44"
-                stroke-width="15"
-                stroke-linejoin="miter"
-                stroke-miterlimit="10"
-                d="M31.12 75.09H60.49C69.01 75.09 75.34 73.01 79.5 68.85 83.66 64.7 85.74 58.99 85.74 51.72c0-6.68-2.05-12.07-6.14-16.19C75.5 31.41 69.77 29.35 62.41 29.35H31.12V75.09zm118.02 84.19H124.18L64.34 97.01H31.12v62.42H7.5V7.54H64.34c15.8.0 27.42 4.14 34.84 12.41C106.61 28.22 110.32 38.92 110.32 52.05 110.32 71.56 102.45 84.99 86.7 92.33l62.44 66.95zM233.15 159.43H148V7.54h84.29V30.13H171.62V71.3h48.76V93.33H171.62v42.51h61.53v23.59zm86.31.0H294.11V31.02H186.63V7.54H366.31V31.02H319.46V159.43z"
-              ></path>
-            </svg>
-          </span>
-          <span class="logo-text">
-            <span class="logo-sep">|</span>
-            <span class="logo-sub">Green Software Champions</span>
-          </span>
-        </div>
-
-        <nav>
-          <button
-            class="nav-btn ${this.activeView === "leaderboard" ? "active" : ""}"
-            @click="${() => {
-              this.activeView = "leaderboard";
-            }}"
-          >
-            🏆 Leaderboard
-          </button>
-          <button
-            class="nav-btn ${this.activeView === "map" ? "active" : ""}"
-            @click="${() => {
-              this.activeView = "map";
-            }}"
-          >
-            🗺️ World Map
-          </button>
-        </nav>
-
-        <div class="period-selector">
-          <label for="period">Period</label>
-          <input
-            type="month"
-            id="period"
-            .value="${this.period}"
-            @change="${this._onPeriodChange}"
-          />
-        </div>
-      </header>
-
-      <!-- Hero -->
-      <div class="hero">
-        <div class="hero-inner">
-          <div class="hero-text">
-            <h1>
-              We track cloud carbon footprints,<br />
-              <span>across all your teams</span>
-            </h1>
-            <p>
-              Compete, reduce and champion sustainable software engineering with
-              RETIT Green Software Champions.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <main>
-        ${this._dataTask.render({
-          pending: () => html`
-            <div class="loading">
-              <div class="spinner"></div>
-              <p>Loading carbon data…</p>
-            </div>
-          `,
-          complete: (data) => this._renderContent(data),
-          error: (err) => html`
-            <div class="error-msg">
-              <span>⚠️</span>
-              <span>
-                ${
-                  (err instanceof Error && err.message) ||
-                  "Failed to load leaderboard data."
-                }
-              </span>
-            </div>
-          `,
-        })}
-      </main>
-
-      <footer>
-        Powered by
-        <a href="https://www.retit.io" target="_blank" rel="noopener"
-          >RETIT GmbH</a
-        >
-        &nbsp;·&nbsp; Green Software Champions &nbsp;·&nbsp; Cloud Carbon
-        Footprint Tracking
-      </footer>
-    `;
-  }
 }
 
 declare global {

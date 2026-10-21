@@ -14,6 +14,125 @@ export class GscTeamCard extends LitElement {
   @property({ type: Object }) entry?: LeaderboardEntry;
   @state() expanded = false;
 
+  override render() {
+    const e = this.entry;
+    if (!e) return html``;
+    const rankClass = e.rank <= 3 ? `rank-${e.rank}` : "";
+
+    return html`
+      <div
+        class="card ${rankClass}"
+        @click="${() => {
+          this.expanded = !this.expanded;
+        }}"
+      >
+        <div class="top-row">
+          <div class="rank-badge">${e.rank}</div>
+          <div class="team-icon">${e.teamIcon || "🌍"}</div>
+          <div class="team-info">
+            <div class="team-name">${e.teamName}</div>
+            <div class="team-color-bar" style="background:${e.teamColor}"></div>
+          </div>
+
+          <div class="metrics">
+            <div class="metric">
+              <div class="value">${formatCo2(e.totalCo2Kg)}</div>
+              <div class="label">CO₂e Total</div>
+            </div>
+            <div class="metric">
+              <div
+                class="value reduction ${reductionTrend(e.reductionPercent)}"
+              >
+                ${formatReductionPercent(e.reductionPercent)}
+              </div>
+              <div class="label">vs. Prev Period</div>
+            </div>
+            <div class="metric">
+              <div class="value">${formatPercent(e.companySharePercent)}</div>
+              <div class="label">Company Share</div>
+            </div>
+          </div>
+
+          <div class="achievements">
+            ${(e.achievements || [])
+              .slice(0, 3)
+              .map(
+                (a) => html`
+                  <gsc-achievement-badge
+                    .achievement="${a}"
+                    compact
+                  ></gsc-achievement-badge>
+                `,
+              )}
+          </div>
+
+          <span class="chevron ${this.expanded ? "open" : ""}">▼</span>
+        </div>
+
+        ${
+          this.expanded
+            ? html`
+                <div class="expand-section">
+                  <div>
+                    <div class="expand-label">
+                      Company share of cloud emissions
+                    </div>
+                    <div class="share-bar-label">
+                      <span>Cloud carbon share</span>
+                      <span>${formatPercent(e.companySharePercent, 2)}</span>
+                    </div>
+                    <div class="share-bar-track">
+                      <div
+                        class="share-bar-fill"
+                        style="width:${Math.min(e.companySharePercent || 0, 100)}%;background:${e.teamColor}"
+                      ></div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div class="expand-label">Provider Breakdown</div>
+                    <div class="provider-breakdown">
+                      <div class="provider-chip">
+                        <div class="pname">☁️ AWS</div>
+                        <div class="pvalue">${formatCo2(e.awsCo2Kg)}</div>
+                      </div>
+                      <div class="provider-chip">
+                        <div class="pname">🔷 Azure</div>
+                        <div class="pvalue">${formatCo2(e.azureCo2Kg)}</div>
+                      </div>
+                      <div class="provider-chip">
+                        <div class="pname">🟡 GCP</div>
+                        <div class="pvalue">${formatCo2(e.gcpCo2Kg)}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  ${
+                    e.achievements && e.achievements.length > 0
+                      ? html`
+                          <div>
+                            <div class="expand-label">🏅 Achievements</div>
+                            <div style="display:flex;gap:0.5em;flex-wrap:wrap">
+                              ${e.achievements.map(
+                                (a) => html`
+                                  <gsc-achievement-badge
+                                    .achievement="${a}"
+                                  ></gsc-achievement-badge>
+                                `,
+                              )}
+                            </div>
+                          </div>
+                        `
+                      : ""
+                  }
+                </div>
+              `
+            : ""
+        }
+      </div>
+    `;
+  }
+
   static override styles = css`
     :host {
       display: block;
@@ -274,125 +393,6 @@ export class GscTeamCard extends LitElement {
       transition: width 0.8s ease;
     }
   `;
-
-  override render() {
-    const e = this.entry;
-    if (!e) return html``;
-    const rankClass = e.rank <= 3 ? `rank-${e.rank}` : "";
-
-    return html`
-      <div
-        class="card ${rankClass}"
-        @click="${() => {
-          this.expanded = !this.expanded;
-        }}"
-      >
-        <div class="top-row">
-          <div class="rank-badge">${e.rank}</div>
-          <div class="team-icon">${e.teamIcon || "🌍"}</div>
-          <div class="team-info">
-            <div class="team-name">${e.teamName}</div>
-            <div class="team-color-bar" style="background:${e.teamColor}"></div>
-          </div>
-
-          <div class="metrics">
-            <div class="metric">
-              <div class="value">${formatCo2(e.totalCo2Kg)}</div>
-              <div class="label">CO₂e Total</div>
-            </div>
-            <div class="metric">
-              <div
-                class="value reduction ${reductionTrend(e.reductionPercent)}"
-              >
-                ${formatReductionPercent(e.reductionPercent)}
-              </div>
-              <div class="label">vs. Prev Period</div>
-            </div>
-            <div class="metric">
-              <div class="value">${formatPercent(e.companySharePercent)}</div>
-              <div class="label">Company Share</div>
-            </div>
-          </div>
-
-          <div class="achievements">
-            ${(e.achievements || [])
-              .slice(0, 3)
-              .map(
-                (a) => html`
-                  <gsc-achievement-badge
-                    .achievement="${a}"
-                    compact
-                  ></gsc-achievement-badge>
-                `,
-              )}
-          </div>
-
-          <span class="chevron ${this.expanded ? "open" : ""}">▼</span>
-        </div>
-
-        ${
-          this.expanded
-            ? html`
-                <div class="expand-section">
-                  <div>
-                    <div class="expand-label">
-                      Company share of cloud emissions
-                    </div>
-                    <div class="share-bar-label">
-                      <span>Cloud carbon share</span>
-                      <span>${formatPercent(e.companySharePercent, 2)}</span>
-                    </div>
-                    <div class="share-bar-track">
-                      <div
-                        class="share-bar-fill"
-                        style="width:${Math.min(e.companySharePercent || 0, 100)}%;background:${e.teamColor}"
-                      ></div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <div class="expand-label">Provider Breakdown</div>
-                    <div class="provider-breakdown">
-                      <div class="provider-chip">
-                        <div class="pname">☁️ AWS</div>
-                        <div class="pvalue">${formatCo2(e.awsCo2Kg)}</div>
-                      </div>
-                      <div class="provider-chip">
-                        <div class="pname">🔷 Azure</div>
-                        <div class="pvalue">${formatCo2(e.azureCo2Kg)}</div>
-                      </div>
-                      <div class="provider-chip">
-                        <div class="pname">🟡 GCP</div>
-                        <div class="pvalue">${formatCo2(e.gcpCo2Kg)}</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  ${
-                    e.achievements && e.achievements.length > 0
-                      ? html`
-                          <div>
-                            <div class="expand-label">🏅 Achievements</div>
-                            <div style="display:flex;gap:0.5em;flex-wrap:wrap">
-                              ${e.achievements.map(
-                                (a) => html`
-                                  <gsc-achievement-badge
-                                    .achievement="${a}"
-                                  ></gsc-achievement-badge>
-                                `,
-                              )}
-                            </div>
-                          </div>
-                        `
-                      : ""
-                  }
-                </div>
-              `
-            : ""
-        }
-      </div>
-    `;
-  }
 }
 
 declare global {

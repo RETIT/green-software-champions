@@ -11,6 +11,21 @@ export class GscAchievementBadge extends LitElement {
   @property({ type: Object }) achievement?: Achievement;
   @property({ type: Boolean }) compact = false;
 
+  override render() {
+    const a = this.achievement;
+    if (!a) return html``;
+
+    return html`
+      <span
+        class="badge ${this.compact ? "compact" : ""}"
+        title="${a.description || a.title}"
+      >
+        <span class="icon">${a.badgeIcon || "🏅"}</span>
+        ${!this.compact ? html`<span class="title">${a.title}</span>` : ""}
+      </span>
+    `;
+  }
+
   static override styles = css`
     :host {
       display: inline-block;
@@ -59,21 +74,6 @@ export class GscAchievementBadge extends LitElement {
       font-size: 0.9em;
     }
   `;
-
-  override render() {
-    const a = this.achievement;
-    if (!a) return html``;
-
-    return html`
-      <span
-        class="badge ${this.compact ? "compact" : ""}"
-        title="${a.description || a.title}"
-      >
-        <span class="icon">${a.badgeIcon || "🏅"}</span>
-        ${!this.compact ? html`<span class="title">${a.title}</span>` : ""}
-      </span>
-    `;
-  }
 }
 
 declare global {
