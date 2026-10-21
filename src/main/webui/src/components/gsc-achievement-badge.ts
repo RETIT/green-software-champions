@@ -1,17 +1,21 @@
-import { LitElement, html, css } from 'lit';
+import { LitElement, css, html } from "lit";
+import { customElement, property } from "lit/decorators.js";
+import type { Achievement } from "../types.ts";
 
 /**
  * Achievement badge component. Renders a small pill/chip showing the
  * achievement icon and title. Supports a compact mode for inline display.
  */
-class GscAchievementBadge extends LitElement {
-  static properties = {
-    achievement: { type: Object },
-    compact: { type: Boolean },
-  };
+@customElement("gsc-achievement-badge")
+export class GscAchievementBadge extends LitElement {
+  @property({ type: Object }) achievement?: Achievement;
+  @property({ type: Boolean }) compact = false;
 
-  static styles = css`
-    :host { display: inline-block; font-family: 'Source Sans 3', 'Source Sans Pro', Helvetica, sans-serif; }
+  static override styles = css`
+    :host {
+      display: inline-block;
+      font-family: "Source Sans 3", "Source Sans Pro", Helvetica, sans-serif;
+    }
 
     .badge {
       display: inline-flex;
@@ -47,22 +51,33 @@ class GscAchievementBadge extends LitElement {
       transform: scale(1.15);
     }
 
-    .icon { font-size: 1em; line-height: 1; }
-    .title { font-size: 0.9em; }
+    .icon {
+      font-size: 1em;
+      line-height: 1;
+    }
+    .title {
+      font-size: 0.9em;
+    }
   `;
 
-  render() {
+  override render() {
     const a = this.achievement;
     if (!a) return html``;
 
     return html`
-      <span class="badge ${this.compact ? 'compact' : ''}"
-            title="${a.description || a.title}">
-        <span class="icon">${a.badgeIcon || '🏅'}</span>
-        ${!this.compact ? html`<span class="title">${a.title}</span>` : ''}
+      <span
+        class="badge ${this.compact ? "compact" : ""}"
+        title="${a.description || a.title}"
+      >
+        <span class="icon">${a.badgeIcon || "🏅"}</span>
+        ${!this.compact ? html`<span class="title">${a.title}</span>` : ""}
       </span>
     `;
   }
 }
 
-customElements.define('gsc-achievement-badge', GscAchievementBadge);
+declare global {
+  interface HTMLElementTagNameMap {
+    "gsc-achievement-badge": GscAchievementBadge;
+  }
+}

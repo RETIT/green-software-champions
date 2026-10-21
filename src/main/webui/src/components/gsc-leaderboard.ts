@@ -1,19 +1,21 @@
-import { LitElement, html, css } from 'lit';
+import { LitElement, css, html } from "lit";
+import { customElement, property } from "lit/decorators.js";
+import type { LeaderboardEntry } from "../types.ts";
+import "./gsc-team-card.ts";
 
 /**
  * Leaderboard component that displays all teams ranked by their
  * carbon footprint with reduction metrics and achievements.
  */
-class GscLeaderboard extends LitElement {
-  static properties = {
-    entries: { type: Array },
-    period: { type: String },
-  };
+@customElement("gsc-leaderboard")
+export class GscLeaderboard extends LitElement {
+  @property({ type: Array }) entries: LeaderboardEntry[] = [];
+  @property({ type: String }) period = "";
 
-  static styles = css`
+  static override styles = css`
     :host {
       display: block;
-      font-family: 'Source Sans 3', 'Source Sans Pro', Helvetica, sans-serif;
+      font-family: "Source Sans 3", "Source Sans Pro", Helvetica, sans-serif;
       font-weight: 300;
     }
 
@@ -97,13 +99,16 @@ class GscLeaderboard extends LitElement {
     }
   `;
 
-  render() {
+  override render() {
     if (!this.entries || this.entries.length === 0) {
       return html`
         <div class="empty-state">
           <div class="empty-icon">📊</div>
-          <p>No leaderboard data available for <strong>${this.period}</strong>.<br/>
-          Run a carbon data sync to populate the leaderboard.</p>
+          <p>
+            No leaderboard data available for
+            <strong>${this.period}</strong>.<br />
+            Run a carbon data sync to populate the leaderboard.
+          </p>
         </div>
       `;
     }
@@ -128,16 +133,22 @@ class GscLeaderboard extends LitElement {
           <span>High footprint</span>
         </div>
         <div class="legend-divider"></div>
-        <div class="legend-item">↓ reduction is good &nbsp;·&nbsp; ↑ increase needs attention</div>
+        <div class="legend-item">
+          ↓ reduction is good &nbsp;·&nbsp; ↑ increase needs attention
+        </div>
       </div>
 
       <div class="leaderboard-grid">
-        ${this.entries.map(entry => html`
-          <gsc-team-card .entry="${entry}"></gsc-team-card>
-        `)}
+        ${this.entries.map(
+          (entry) => html` <gsc-team-card .entry="${entry}"></gsc-team-card> `,
+        )}
       </div>
     `;
   }
 }
 
-customElements.define('gsc-leaderboard', GscLeaderboard);
+declare global {
+  interface HTMLElementTagNameMap {
+    "gsc-leaderboard": GscLeaderboard;
+  }
+}

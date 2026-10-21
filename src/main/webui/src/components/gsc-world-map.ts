@@ -1,21 +1,36 @@
-import { LitElement, html, css, svg } from "lit";
+import { LitElement, css, html, svg } from "lit";
+import { customElement, property, query } from "lit/decorators.js";
+import type { LeaderboardEntry } from "../types.ts";
 import {
   formatCo2,
   formatPercent,
   formatReductionPercent,
   reductionTrend,
-} from "../util/format";
+} from "../util/format.ts";
+
+interface Point {
+  x: number;
+  y: number;
+}
+
+interface Tooltip extends Point {
+  visible: boolean;
+  entry: LeaderboardEntry | null;
+}
 
 /**
  * World map visualization component.
  */
-class GscWorldMap extends LitElement {
-  static properties = {
-    entries: { type: Array },
-    period: { type: String },
-  };
+@customElement("gsc-world-map")
+export class GscWorldMap extends LitElement {
+  @property({ type: Array }) entries: LeaderboardEntry[] = [];
+  @property({ type: String }) period = "";
 
-  static styles = css`
+  @query(".map-container") private _container!: HTMLElement;
+
+  private _tooltip: Tooltip = { visible: false, x: 0, y: 0, entry: null };
+
+  static override styles = css`
     :host {
       display: block;
       font-family: "Source Sans 3", "Source Sans Pro", Helvetica, sans-serif;
@@ -195,14 +210,7 @@ class GscWorldMap extends LitElement {
     }
   `;
 
-  constructor() {
-    super();
-    this.entries = [];
-    this.period = "";
-    this._tooltip = { visible: false, x: 0, y: 0, entry: null };
-  }
-
-  _teamRegions() {
+  private _teamRegions(): Point[] {
     return [
       { x: 760, y: 200 },
       { x: 680, y: 165 },
@@ -217,31 +225,30 @@ class GscWorldMap extends LitElement {
     ];
   }
 
-  _getPosition(index) {
+  private _getPosition(index: number): Point {
     const regions = this._teamRegions();
-    return regions[index % regions.length];
+    return regions[index % regions.length]!;
   }
 
-  _bubbleRadius(sharePercent) {
+  private _bubbleRadius(sharePercent: number | null): number {
     if (!sharePercent) return 12;
     return 12 + (sharePercent / 100) * 38;
   }
 
-  _showTooltip(e, entry) {
-    const container = this.shadowRoot.querySelector(".map-container");
-    const rect = container.getBoundingClientRect();
+  private _showTooltip(e: MouseEvent, entry: LeaderboardEntry) {
+    const rect = this._container.getBoundingClientRect();
     const x = e.clientX - rect.left + 12;
     const y = e.clientY - rect.top + 12;
     this._tooltip = { visible: true, x, y, entry };
     this.requestUpdate();
   }
 
-  _hideTooltip() {
+  private _hideTooltip() {
     this._tooltip = { ...this._tooltip, visible: false };
     this.requestUpdate();
   }
 
-  _renderMapPaths() {
+  private _renderMapPaths() {
     return svg`
       <rect class="ocean" x="0" y="0" width="960" height="500" />
       <g class="graticule">
@@ -277,7 +284,7 @@ class GscWorldMap extends LitElement {
     `;
   }
 
-  render() {
+  override render() {
     const t = this._tooltip;
 
     return html`
@@ -294,8 +301,8 @@ class GscWorldMap extends LitElement {
             const r = this._bubbleRadius(entry.companySharePercent);
             return svg`
               <g class="team-bubble"
-                 @mouseenter="${(e) => this._showTooltip(e, entry)}"
-                 @mousemove="${(e) => this._showTooltip(e, entry)}"
+                 @mouseenter="${(e: MouseEvent) => this._showTooltip(e, entry)}"
+                 @mousemove="${(e: MouseEvent) => this._showTooltip(e, entry)}"
                  @mouseleave="${this._hideTooltip}">
                 ${
                   i === 0
@@ -349,7 +356,7 @@ class GscWorldMap extends LitElement {
                             class="tooltip-row"
                             style="justify-content:flex-start;gap:0.25em;margin-top:0.3em"
                           >
-                            ${t.entry.achievements.map((a) => html`<span title="${a.title}">${a.badgeIcon}</span>`)}
+                            ${t.entry.achievements.map((a) => html`<span title="${a.title}">${a.badgeIcon || "🏅"}</span>`)}
                           </div>
                         `
                       : ""
@@ -376,4 +383,8 @@ class GscWorldMap extends LitElement {
   }
 }
 
-customElements.define("gsc-world-map", GscWorldMap);
+declare global {
+  interface HTMLElementTagNameMap {
+    "gsc-world-map": GscWorldMap;
+  }
+}

@@ -1,26 +1,36 @@
-import { LitElement, html, css } from "lit";
+import { LitElement, css, html } from "lit";
+import { customElement, property } from "lit/decorators.js";
+import type { LeaderboardEntry, LeaderboardSummary } from "../types.ts";
 import {
   formatCo2,
   formatReductionPercent,
   reductionTrend,
-} from "../util/format";
+  type Trend,
+} from "../util/format.ts";
+import "./gsc-leaderboard.ts";
+import "./gsc-world-map.ts";
 
-const TREND_ICON = { positive: "📉", negative: "📈", neutral: "➖" };
+type View = "leaderboard" | "map";
+
+const TREND_ICON: Record<Trend, string> = {
+  positive: "📉",
+  negative: "📈",
+  neutral: "➖",
+};
 
 /**
  * Root application shell — styled to RETIT CI.
  */
-class GscApp extends LitElement {
-  static properties = {
-    leaderboard: { type: Array },
-    summary: { type: Object },
-    period: { type: String },
-    loading: { type: Boolean },
-    error: { type: String },
-    activeView: { type: String },
-  };
+@customElement("gsc-app")
+export class GscApp extends LitElement {
+  @property({ type: Array }) leaderboard: LeaderboardEntry[] = [];
+  @property({ type: Object }) summary: LeaderboardSummary | null = null;
+  @property({ type: String }) period = this._currentPeriod();
+  @property({ type: Boolean }) loading = false;
+  @property({ type: String }) error: string | null = null;
+  @property({ type: String }) activeView: View = "leaderboard";
 
-  static styles = css`
+  static override styles = css`
     :host {
       display: block;
       min-height: 100vh;
@@ -341,27 +351,17 @@ class GscApp extends LitElement {
     }
   `;
 
-  constructor() {
-    super();
-    this.leaderboard = [];
-    this.summary = null;
-    this.period = this._currentPeriod();
-    this.loading = false;
-    this.error = null;
-    this.activeView = "leaderboard";
-  }
-
-  _currentPeriod() {
+  private _currentPeriod(): string {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   }
 
-  connectedCallback() {
+  override connectedCallback() {
     super.connectedCallback();
     this._loadData();
   }
 
-  async _loadData() {
+  private async _loadData() {
     this.loading = true;
     this.error = null;
     try {
@@ -375,14 +375,16 @@ class GscApp extends LitElement {
       this.leaderboard = await lbRes.json();
       this.summary = await sumRes.json();
     } catch (err) {
-      this.error = err.message || "Failed to load leaderboard data.";
+      this.error =
+        (err instanceof Error && err.message) ||
+        "Failed to load leaderboard data.";
       this._loadDemoData();
     } finally {
       this.loading = false;
     }
   }
 
-  _loadDemoData() {
+  private _loadDemoData() {
     const teams = [
       { name: "Team Alpha", color: "#75b729", icon: "🌱" },
       { name: "Team Beta", color: "#3b8ecf", icon: "💧" },
@@ -390,8 +392,9 @@ class GscApp extends LitElement {
       { name: "Team Delta", color: "#8b5cf6", icon: "🚀" },
     ];
     const baseCo2 = [1240, 2890, 3450, 980];
+    const earnedAt = new Date().toISOString();
     this.leaderboard = teams
-      .map((t, i) => ({
+      .map((t, i): LeaderboardEntry => ({
         teamId: i + 1,
         teamName: t.name,
         teamColor: t.color,
@@ -410,14 +413,18 @@ class GscApp extends LitElement {
             ? [
                 {
                   id: 1,
-                  title: "🌍 Carbon Neutral Pioneer",
+                  title: "Carbon Neutral Pioneer",
+                  description: null,
                   badgeIcon: "🌍",
+                  earnedAt,
                   type: "FIRST_NET_ZERO",
                 },
                 {
                   id: 2,
-                  title: "🏆 Reduction Champion",
+                  title: "Reduction Champion",
+                  description: null,
                   badgeIcon: "🏆",
+                  earnedAt,
                   type: "HIGHEST_REDUCTION",
                 },
               ]
@@ -425,14 +432,20 @@ class GscApp extends LitElement {
               ? [
                   {
                     id: 3,
-                    title: "🥇 Leaderboard Leader",
+                    title: "Leaderboard Leader",
+                    description: null,
                     badgeIcon: "🥇",
+                    earnedAt,
                     type: "LEADERBOARD_LEADER",
                   },
                 ]
               : [],
       }))
-      .sort((a, b) => a.totalCo2Kg - b.totalCo2Kg)
+      .sort(
+        (a, b) =>
+          (a.totalCo2Kg ?? Number.MAX_VALUE) -
+          (b.totalCo2Kg ?? Number.MAX_VALUE),
+      )
       .map((t, i) => ({ ...t, rank: i + 1 }));
 
     const total = this.leaderboard.reduce((s, t) => s + (t.totalCo2Kg || 0), 0);
@@ -442,7 +455,10 @@ class GscApp extends LitElement {
     );
     this.leaderboard = this.leaderboard.map((t) => ({
       ...t,
-      companySharePercent: total > 0 ? (t.totalCo2Kg / total) * 100 : 0,
+      companySharePercent:
+        total > 0 && t.totalCo2Kg !== null
+          ? (t.totalCo2Kg / total) * 100
+          : null,
     }));
     this.summary = {
       period: this.period,
@@ -454,12 +470,12 @@ class GscApp extends LitElement {
     };
   }
 
-  _onPeriodChange(e) {
-    this.period = e.target.value;
+  private _onPeriodChange(e: Event) {
+    this.period = (e.target as HTMLInputElement).value;
     this._loadData();
   }
 
-  render() {
+  override render() {
     const s = this.summary;
     const trend = reductionTrend(s?.reductionPercent);
 
@@ -640,4 +656,8 @@ class GscApp extends LitElement {
   }
 }
 
-customElements.define("gsc-app", GscApp);
+declare global {
+  interface HTMLElementTagNameMap {
+    "gsc-app": GscApp;
+  }
+}

@@ -1,18 +1,20 @@
-import { LitElement, html, css } from "lit";
+import { LitElement, css, html } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
+import type { LeaderboardEntry } from "../types.ts";
 import {
   formatCo2,
   formatPercent,
   formatReductionPercent,
   reductionTrend,
-} from "../util/format";
+} from "../util/format.ts";
+import "./gsc-achievement-badge.ts";
 
-class GscTeamCard extends LitElement {
-  static properties = {
-    entry: { type: Object },
-    expanded: { type: Boolean, state: true },
-  };
+@customElement("gsc-team-card")
+export class GscTeamCard extends LitElement {
+  @property({ type: Object }) entry?: LeaderboardEntry;
+  @state() expanded = false;
 
-  static styles = css`
+  static override styles = css`
     :host {
       display: block;
       font-family: "Source Sans 3", "Source Sans Pro", Helvetica, sans-serif;
@@ -273,12 +275,7 @@ class GscTeamCard extends LitElement {
     }
   `;
 
-  constructor() {
-    super();
-    this.expanded = false;
-  }
-
-  render() {
+  override render() {
     const e = this.entry;
     if (!e) return html``;
     const rankClass = e.rank <= 3 ? `rank-${e.rank}` : "";
@@ -398,4 +395,8 @@ class GscTeamCard extends LitElement {
   }
 }
 
-customElements.define("gsc-team-card", GscTeamCard);
+declare global {
+  interface HTMLElementTagNameMap {
+    "gsc-team-card": GscTeamCard;
+  }
+}
