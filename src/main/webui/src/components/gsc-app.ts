@@ -1,3 +1,4 @@
+import { Task } from "@lit/task";
 import { LitElement, css, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import type { LeaderboardEntry, LeaderboardSummary } from "../types.ts";
@@ -12,6 +13,13 @@ import "./gsc-world-map.ts";
 
 type View = "leaderboard" | "map";
 
+interface LeaderboardData {
+  leaderboard: LeaderboardEntry[];
+  summary: LeaderboardSummary;
+  /** Set when the API failed and demo data is shown instead. */
+  error: string | null;
+}
+
 const TREND_ICON: Record<Trend, string> = {
   positive: "📉",
   negative: "📈",
@@ -23,11 +31,7 @@ const TREND_ICON: Record<Trend, string> = {
  */
 @customElement("gsc-app")
 export class GscApp extends LitElement {
-  @property({ type: Array }) leaderboard: LeaderboardEntry[] = [];
-  @property({ type: Object }) summary: LeaderboardSummary | null = null;
   @property({ type: String }) period = this._currentPeriod();
-  @property({ type: Boolean }) loading = false;
-  @property({ type: String }) error: string | null = null;
   @property({ type: String }) activeView: View = "leaderboard";
 
   static override styles = css`
@@ -351,40 +355,48 @@ export class GscApp extends LitElement {
     }
   `;
 
+  /**
+   * Reruns whenever `period` changes. A new run aborts the in-flight fetches
+   * of the previous one, and results of superseded runs are discarded.
+   */
+  private _dataTask = new Task(this, {
+    task: async ([period], { signal }): Promise<LeaderboardData> => {
+      const query = `period=${encodeURIComponent(period)}`;
+      try {
+        const [lbRes, sumRes] = await Promise.all([
+          fetch(`/api/leaderboard?${query}`, { signal }),
+          fetch(`/api/leaderboard/summary?${query}`, { signal }),
+        ]);
+        if (!lbRes.ok)
+          throw new Error(`Leaderboard fetch failed: ${lbRes.status}`);
+        if (!sumRes.ok)
+          throw new Error(`Summary fetch failed: ${sumRes.status}`);
+        return {
+          leaderboard: await lbRes.json(),
+          summary: await sumRes.json(),
+          error: null,
+        };
+      } catch (err) {
+        signal.throwIfAborted();
+        return {
+          ...this._demoData(period),
+          error:
+            (err instanceof Error && err.message) ||
+            "Failed to load leaderboard data.",
+        };
+      }
+    },
+    args: () => [this.period] as const,
+  });
+
   private _currentPeriod(): string {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   }
 
-  override connectedCallback() {
-    super.connectedCallback();
-    this._loadData();
-  }
-
-  private async _loadData() {
-    this.loading = true;
-    this.error = null;
-    try {
-      const [lbRes, sumRes] = await Promise.all([
-        fetch(`/api/leaderboard?period=${this.period}`),
-        fetch(`/api/leaderboard/summary?period=${this.period}`),
-      ]);
-      if (!lbRes.ok)
-        throw new Error(`Leaderboard fetch failed: ${lbRes.status}`);
-      if (!sumRes.ok) throw new Error(`Summary fetch failed: ${sumRes.status}`);
-      this.leaderboard = await lbRes.json();
-      this.summary = await sumRes.json();
-    } catch (err) {
-      this.error =
-        (err instanceof Error && err.message) ||
-        "Failed to load leaderboard data.";
-      this._loadDemoData();
-    } finally {
-      this.loading = false;
-    }
-  }
-
-  private _loadDemoData() {
+  private _demoData(
+    period: string,
+  ): Pick<LeaderboardData, "leaderboard" | "summary"> {
     const teams = [
       { name: "Team Alpha", color: "#75b729", icon: "🌱" },
       { name: "Team Beta", color: "#3b8ecf", icon: "💧" },
@@ -393,14 +405,14 @@ export class GscApp extends LitElement {
     ];
     const baseCo2 = [1240, 2890, 3450, 980];
     const earnedAt = new Date().toISOString();
-    this.leaderboard = teams
+    const ranked = teams
       .map((t, i): LeaderboardEntry => ({
         teamId: i + 1,
         teamName: t.name,
         teamColor: t.color,
         teamIcon: t.icon,
         rank: 0,
-        period: this.period,
+        period,
         totalCo2Kg: baseCo2[i],
         previousCo2Kg: baseCo2[i] * (1 + (Math.random() * 0.3 - 0.1)),
         reductionPercent: Math.random() * 30 - 5,
@@ -448,37 +460,102 @@ export class GscApp extends LitElement {
       )
       .map((t, i) => ({ ...t, rank: i + 1 }));
 
-    const total = this.leaderboard.reduce((s, t) => s + (t.totalCo2Kg || 0), 0);
-    const prevTotal = this.leaderboard.reduce(
-      (s, t) => s + (t.previousCo2Kg || 0),
-      0,
-    );
-    this.leaderboard = this.leaderboard.map((t) => ({
-      ...t,
-      companySharePercent:
-        total > 0 && t.totalCo2Kg !== null
-          ? (t.totalCo2Kg / total) * 100
-          : null,
-    }));
-    this.summary = {
-      period: this.period,
-      totalCo2Kg: total,
-      previousTotalCo2Kg: prevTotal,
-      reductionPercent:
-        prevTotal > 0 ? ((prevTotal - total) / prevTotal) * 100 : null,
-      teamCount: teams.length,
+    const total = ranked.reduce((s, t) => s + (t.totalCo2Kg || 0), 0);
+    const prevTotal = ranked.reduce((s, t) => s + (t.previousCo2Kg || 0), 0);
+    return {
+      leaderboard: ranked.map((t) => ({
+        ...t,
+        companySharePercent:
+          total > 0 && t.totalCo2Kg !== null
+            ? (t.totalCo2Kg / total) * 100
+            : null,
+      })),
+      summary: {
+        period,
+        totalCo2Kg: total,
+        previousTotalCo2Kg: prevTotal,
+        reductionPercent:
+          prevTotal > 0 ? ((prevTotal - total) / prevTotal) * 100 : null,
+        teamCount: teams.length,
+      },
     };
   }
 
   private _onPeriodChange(e: Event) {
-    this.period = (e.target as HTMLInputElement).value;
-    this._loadData();
+    const input = e.target as HTMLInputElement;
+    // A cleared month input yields "", which is not a valid period.
+    if (!input.value) {
+      input.value = this.period;
+      return;
+    }
+    // Setting the period reruns the data task.
+    this.period = input.value;
+  }
+
+  private _renderContent({ leaderboard, summary: s, error }: LeaderboardData) {
+    const trend = reductionTrend(s.reductionPercent);
+
+    return html`
+      ${
+        error
+          ? html`
+              <div class="error-msg">
+                <span>⚠️</span>
+                <span>${error} — Showing demo data.</span>
+              </div>
+            `
+          : ""
+      }
+      <div class="summary-bar">
+        <div class="summary-card">
+          <div class="summary-card-icon">🌫️</div>
+          <div class="summary-card-body">
+            <div class="value">${formatCo2(s.totalCo2Kg)}</div>
+            <div class="label">Total Company CO₂e</div>
+          </div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-card-icon">${TREND_ICON[trend]}</div>
+          <div class="summary-card-body">
+            <div class="value ${trend}">
+              ${formatReductionPercent(s.reductionPercent)}
+            </div>
+            <div class="label">vs. Previous Period</div>
+          </div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-card-icon">👥</div>
+          <div class="summary-card-body">
+            <div class="value">${s.teamCount}</div>
+            <div class="label">Teams Competing</div>
+          </div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-card-icon">📅</div>
+          <div class="summary-card-body">
+            <div class="value" style="font-size:1.1em">${this.period}</div>
+            <div class="label">Current Period</div>
+          </div>
+        </div>
+      </div>
+      ${
+        this.activeView === "leaderboard"
+          ? html`
+              <gsc-leaderboard
+                .entries="${leaderboard}"
+                .period="${this.period}"
+              >
+              </gsc-leaderboard>
+            `
+          : html`
+              <gsc-world-map .entries="${leaderboard}" .period="${this.period}">
+              </gsc-world-map>
+            `
+      }
+    `;
   }
 
   override render() {
-    const s = this.summary;
-    const trend = reductionTrend(s?.reductionPercent);
-
     return html`
       <!-- Navigation Bar -->
       <header>
@@ -565,83 +642,26 @@ export class GscApp extends LitElement {
       </div>
 
       <main>
-        ${
-          this.loading
-            ? html`
-                <div class="loading">
-                  <div class="spinner"></div>
-                  <p>Loading carbon data…</p>
-                </div>
-              `
-            : ""
-        }
-        ${
-          this.error
-            ? html`
-                <div class="error-msg">
-                  <span>⚠️</span>
-                  <span>${this.error} — Showing demo data.</span>
-                </div>
-              `
-            : ""
-        }
-        ${
-          s
-            ? html`
-                <div class="summary-bar">
-                  <div class="summary-card">
-                    <div class="summary-card-icon">🌫️</div>
-                    <div class="summary-card-body">
-                      <div class="value">${formatCo2(s.totalCo2Kg)}</div>
-                      <div class="label">Total Company CO₂e</div>
-                    </div>
-                  </div>
-                  <div class="summary-card">
-                    <div class="summary-card-icon">${TREND_ICON[trend]}</div>
-                    <div class="summary-card-body">
-                      <div class="value ${trend}">
-                        ${formatReductionPercent(s.reductionPercent)}
-                      </div>
-                      <div class="label">vs. Previous Period</div>
-                    </div>
-                  </div>
-                  <div class="summary-card">
-                    <div class="summary-card-icon">👥</div>
-                    <div class="summary-card-body">
-                      <div class="value">${s.teamCount}</div>
-                      <div class="label">Teams Competing</div>
-                    </div>
-                  </div>
-                  <div class="summary-card">
-                    <div class="summary-card-icon">📅</div>
-                    <div class="summary-card-body">
-                      <div class="value" style="font-size:1.1em">
-                        ${this.period}
-                      </div>
-                      <div class="label">Current Period</div>
-                    </div>
-                  </div>
-                </div>
-              `
-            : ""
-        }
-        ${
-          this.activeView === "leaderboard"
-            ? html`
-                <gsc-leaderboard
-                  .entries="${this.leaderboard}"
-                  .period="${this.period}"
-                >
-                </gsc-leaderboard>
-              `
-            : html`
-                <gsc-world-map
-                  .entries="${this.leaderboard}"
-                  .period="${this.period}"
-                >
-                </gsc-world-map>
-              `
-        }
+        ${this._dataTask.render({
+          pending: () => html`
+            <div class="loading">
+              <div class="spinner"></div>
+              <p>Loading carbon data…</p>
+            </div>
+          `,
+          complete: (data) => this._renderContent(data),
+          error: (err) => html`
+            <div class="error-msg">
+              <span>⚠️</span>
+              <span>
+                ${
+                  (err instanceof Error && err.message) ||
+                  "Failed to load leaderboard data."
+                }
+              </span>
+            </div>
+          `,
+        })}
       </main>
 
       <footer>
