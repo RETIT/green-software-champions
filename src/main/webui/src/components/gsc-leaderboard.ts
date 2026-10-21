@@ -34,15 +34,15 @@ export class GscLeaderboard extends LitElement {
 
       <div class="legend">
         <div class="legend-item">
-          <div class="legend-dot" style="background:#75b729"></div>
+          <div class="legend-dot" style="background:var(--retit-green)"></div>
           <span>Low footprint</span>
         </div>
         <div class="legend-item">
-          <div class="legend-dot" style="background:#e09c1a"></div>
+          <div class="legend-dot" style="background:var(--retit-gold)"></div>
           <span>Medium footprint</span>
         </div>
         <div class="legend-item">
-          <div class="legend-dot" style="background:#c0392b"></div>
+          <div class="legend-dot" style="background:var(--retit-red)"></div>
           <span>High footprint</span>
         </div>
         <div class="legend-divider"></div>
@@ -71,14 +71,14 @@ export class GscLeaderboard extends LitElement {
       align-items: baseline;
       justify-content: space-between;
       margin-bottom: 1em;
-      border-bottom: 1px solid rgba(144, 144, 144, 0.4);
+      border-bottom: 1px solid var(--retit-border);
       padding-bottom: 0.5em;
     }
 
     .section-title {
       font-size: 1.1em;
       font-weight: 400;
-      color: #555;
+      color: var(--retit-text);
       display: flex;
       align-items: center;
       gap: 0.4em;
@@ -86,7 +86,7 @@ export class GscLeaderboard extends LitElement {
 
     .section-meta {
       font-size: 0.8em;
-      color: #999;
+      color: var(--retit-text-light);
       font-weight: 300;
     }
 
@@ -98,10 +98,10 @@ export class GscLeaderboard extends LitElement {
     .empty-state {
       text-align: center;
       padding: 4em 2em;
-      color: #999;
-      background: #fff;
+      color: var(--retit-text-light);
+      background: var(--retit-white);
       border-radius: 3px;
-      box-shadow: 0px 3px 10px 3px rgba(0, 0, 0, 0.08);
+      box-shadow: var(--retit-shadow);
     }
 
     .empty-state .empty-icon {
@@ -120,7 +120,7 @@ export class GscLeaderboard extends LitElement {
       gap: 1.25em;
       margin-bottom: 1em;
       font-size: 0.78em;
-      color: #999;
+      color: var(--retit-text-light);
       flex-wrap: wrap;
       align-items: center;
     }
@@ -142,7 +142,7 @@ export class GscLeaderboard extends LitElement {
     .legend-divider {
       width: 1px;
       height: 12px;
-      background: rgba(144, 144, 144, 0.4);
+      background: var(--retit-border);
     }
   `;
 }

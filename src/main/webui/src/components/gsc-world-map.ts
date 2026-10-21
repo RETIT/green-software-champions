@@ -214,26 +214,26 @@ export class GscWorldMap extends LitElement {
       align-items: baseline;
       justify-content: space-between;
       margin-bottom: 1em;
-      border-bottom: 1px solid rgba(144, 144, 144, 0.4);
+      border-bottom: 1px solid var(--retit-border);
       padding-bottom: 0.5em;
     }
 
     .section-title {
       font-size: 1.1em;
       font-weight: 400;
-      color: #555;
+      color: var(--retit-text);
     }
 
     .section-meta {
       font-size: 0.8em;
-      color: #999;
+      color: var(--retit-text-light);
       font-weight: 300;
     }
 
     .map-container {
-      background: #fff;
+      background: var(--retit-white);
       border-radius: 3px;
-      box-shadow: 0px 3px 10px 3px rgba(0, 0, 0, 0.08);
+      box-shadow: var(--retit-shadow);
       padding: 1.5em;
       position: relative;
       overflow: hidden;
@@ -247,18 +247,18 @@ export class GscWorldMap extends LitElement {
 
     /* Map colors aligned to RETIT light theme */
     .land {
-      fill: #d8edc8;
-      stroke: #b0d090;
+      fill: var(--retit-map-land);
+      stroke: color-mix(in srgb, var(--retit-map-land) 70%, var(--retit-green-dark));
       stroke-width: 0.5;
     }
 
     .ocean {
-      fill: #e8f4fb;
+      fill: var(--retit-map-ocean);
     }
 
     .graticule {
       fill: none;
-      stroke: rgba(144, 144, 144, 0.15);
+      stroke: var(--retit-border);
       stroke-width: 0.3;
     }
 
@@ -278,7 +278,7 @@ export class GscWorldMap extends LitElement {
     }
 
     .team-bubble text {
-      fill: #fff;
+      fill: var(--retit-white);
       font-size: 10px;
       text-anchor: middle;
       dominant-baseline: central;
@@ -287,7 +287,7 @@ export class GscWorldMap extends LitElement {
     }
 
     .team-label {
-      fill: #555;
+      fill: var(--retit-text);
       font-size: 9px;
       text-anchor: middle;
       pointer-events: none;
@@ -319,7 +319,7 @@ export class GscWorldMap extends LitElement {
       margin-top: 1em;
       flex-wrap: wrap;
       font-size: 0.78em;
-      color: #999;
+      color: var(--retit-text-light);
       align-items: center;
       font-weight: 400;
     }
@@ -332,15 +332,15 @@ export class GscWorldMap extends LitElement {
 
     .legend-circle {
       border-radius: 50%;
-      background: rgba(86, 129, 57, 0.25);
-      border: 2px solid #568139;
+      background: color-mix(in srgb, var(--retit-green-dark) 25%, var(--retit-bg));
+      border: 2px solid var(--retit-green-dark);
     }
 
     /* Tooltip */
     .tooltip {
       position: absolute;
-      background: #fff;
-      border: 1px solid rgba(144, 144, 144, 0.35);
+      background: var(--retit-white);
+      border: 1px solid var(--retit-border);
       border-radius: 3px;
       padding: 0.7em 1em;
       pointer-events: none;
@@ -348,7 +348,7 @@ export class GscWorldMap extends LitElement {
       min-width: 160px;
       transition: opacity 0.15s;
       z-index: 10;
-      box-shadow: 0px 3px 7px 2px rgba(0, 0, 0, 0.12);
+      box-shadow: var(--retit-shadow-raised);
     }
 
     .tooltip.hidden {
@@ -357,7 +357,7 @@ export class GscWorldMap extends LitElement {
 
     .tooltip-name {
       font-weight: 600;
-      color: #555;
+      color: var(--retit-text);
       margin-bottom: 0.35em;
       font-size: 0.95em;
     }
@@ -366,7 +366,7 @@ export class GscWorldMap extends LitElement {
       display: flex;
       justify-content: space-between;
       gap: 0.75em;
-      color: #999;
+      color: var(--retit-text-light);
       font-weight: 400;
       margin-top: 0.15em;
       font-size: 0.9em;
@@ -374,11 +374,11 @@ export class GscWorldMap extends LitElement {
 
     .tooltip-row span:last-child {
       font-weight: 600;
-      color: #568139;
+      color: var(--retit-green-dark);
     }
 
     .tooltip-row span.negative {
-      color: #c0392b;
+      color: var(--retit-red);
     }
   `;
 }

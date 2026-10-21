@@ -36,13 +36,13 @@ export class GscAchievementBadge extends LitElement {
       display: inline-flex;
       align-items: center;
       gap: 0.3em;
-      background: rgba(230, 168, 23, 0.1);
-      border: 1px solid rgba(230, 168, 23, 0.35);
+      background: color-mix(in srgb, var(--retit-gold) 10%, var(--retit-white));
+      border: 1px solid color-mix(in srgb, var(--retit-gold) 35%, var(--retit-white));
       border-radius: 3px;
       padding: 0.15em 0.6em;
       font-size: 0.78em;
       font-weight: 400;
-      color: #9a6e00;
+      color: var(--retit-gold-text);
       white-space: nowrap;
       cursor: help;
       transition: all 0.2s ease;
@@ -50,9 +50,9 @@ export class GscAchievementBadge extends LitElement {
     }
 
     .badge:hover {
-      background: rgba(230, 168, 23, 0.18);
-      border-color: rgba(230, 168, 23, 0.6);
-      box-shadow: 0 1px 4px rgba(230, 168, 23, 0.2);
+      background: color-mix(in srgb, var(--retit-gold) 18%, var(--retit-white));
+      border-color: color-mix(in srgb, var(--retit-gold) 60%, var(--retit-white));
+      box-shadow: 0 1px 4px color-mix(in srgb, var(--retit-gold) 20%, transparent);
     }
 
     .badge.compact {

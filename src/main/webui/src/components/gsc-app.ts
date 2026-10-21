@@ -358,16 +358,16 @@ export class GscApp extends LitElement {
     :host {
       display: block;
       min-height: 100vh;
-      background: #f4fbf6;
+      background: var(--retit-bg);
       font-family: "Source Sans 3", "Source Sans Pro", Helvetica, sans-serif;
       font-weight: 300;
-      color: #666;
+      color: var(--retit-text);
     }
 
     /* ── Navigation bar (RETIT green) ──────────────────── */
     header {
-      background: var(--retit-footer);
-      color: #f7f7f7;
+      background: var(--retit-dark);
+      color: var(--retit-white);
       height: 3.25em;
       line-height: 3.25em;
       position: sticky;
@@ -377,7 +377,7 @@ export class GscApp extends LitElement {
       align-items: center;
       justify-content: space-between;
       padding: 0 1.5em;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      box-shadow: var(--retit-shadow-raised);
     }
 
     /* Logo */
@@ -386,7 +386,7 @@ export class GscApp extends LitElement {
       align-items: center;
       gap: 0.6em;
       text-decoration: none;
-      color: #fff;
+      color: var(--retit-white);
     }
 
     .logo-icon {
@@ -397,24 +397,19 @@ export class GscApp extends LitElement {
     .logo-text {
       font-size: 1em;
       font-weight: 600;
-      color: #fff;
+      color: var(--retit-white);
       letter-spacing: 0.01em;
       line-height: 1;
     }
 
-    .logo-text .retit-highlight {
-      color: #fff;
-      opacity: 0.9;
-    }
-
     .logo-sep {
-      color: rgba(255, 255, 255, 0.5);
+      color: var(--retit-text-light);
       font-weight: 300;
       margin: 0 0.3em;
     }
 
     .logo-sub {
-      color: rgba(255, 255, 255, 0.85);
+      color: var(--retit-on-dark-text-muted);
       font-weight: 300;
     }
 
@@ -429,7 +424,7 @@ export class GscApp extends LitElement {
     .nav-btn {
       background: transparent;
       border: none;
-      color: #f7f7f7;
+      color: var(--retit-white);
       padding: 0 1em;
       height: 2em;
       line-height: 1.95em;
@@ -445,12 +440,12 @@ export class GscApp extends LitElement {
     }
 
     .nav-btn:hover {
-      background-color: rgba(0, 0, 0, 0.15);
+      background-color: var(--retit-on-dark-fill);
     }
 
     .nav-btn.active {
-      background-color: rgba(0, 0, 0, 0.2);
-      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+      background-color: var(--retit-on-dark-fill);
+      box-shadow: inset 0 0 0 1px var(--retit-on-dark-border);
     }
 
     /* Period selector */
@@ -463,15 +458,15 @@ export class GscApp extends LitElement {
     .period-selector label {
       font-size: 0.75em;
       font-weight: 400;
-      color: rgba(255, 255, 255, 0.8);
+      color: var(--retit-on-dark-text-muted);
       text-transform: uppercase;
       letter-spacing: 0.06em;
     }
 
     .period-selector input[type="month"] {
-      background: rgba(255, 255, 255, 0.15);
-      border: 1px solid rgba(255, 255, 255, 0.35);
-      color: #fff;
+      background: var(--retit-on-dark-fill);
+      border: 1px solid var(--retit-on-dark-border);
+      color: var(--retit-white);
       padding: 0.2em 0.5em;
       border-radius: 4px;
       font-size: 0.8em;
@@ -483,15 +478,15 @@ export class GscApp extends LitElement {
 
     .period-selector input[type="month"]:hover,
     .period-selector input[type="month"]:focus {
-      background: rgba(255, 255, 255, 0.25);
+      background: color-mix(in srgb, var(--retit-white) 15%, var(--retit-on-dark-fill));
     }
 
     /* ── Hero section ───────────────────────────────────── */
     .hero {
-      background: #f4fbf6;
+      background: var(--retit-bg);
       padding: 3em 2em 2em;
       text-align: left;
-      border-bottom: 1px solid rgba(144, 144, 144, 0.25);
+      border-bottom: 1px solid var(--retit-border);
     }
 
     .hero-inner {
@@ -506,18 +501,18 @@ export class GscApp extends LitElement {
     .hero-text h1 {
       font-size: 1.8em;
       font-weight: 400;
-      color: #568139;
+      color: var(--retit-green-dark);
       line-height: 1.25em;
       margin: 0 0 0.4em;
     }
 
     .hero-text h1 span {
-      color: #75b729;
+      color: var(--retit-green);
     }
 
     .hero-text p {
       font-size: 0.95em;
-      color: #999;
+      color: var(--retit-text-light);
       font-weight: 300;
       margin: 0;
     }
@@ -538,9 +533,9 @@ export class GscApp extends LitElement {
     }
 
     .summary-card {
-      background: #fff;
+      background: var(--retit-white);
       border-radius: 3px;
-      box-shadow: 0px 3px 10px 3px rgba(0, 0, 0, 0.08);
+      box-shadow: var(--retit-shadow);
       padding: 1.25em 1.5em;
       display: flex;
       align-items: flex-start;
@@ -558,13 +553,13 @@ export class GscApp extends LitElement {
       left: 0;
       width: 0;
       height: 3px;
-      background: #568139;
+      background: var(--retit-green-dark);
       border-radius: 3px 3px 0 0;
       transition: width 0.4s ease;
     }
 
     .summary-card:hover {
-      box-shadow: 0px 3px 7px 2px rgba(0, 0, 0, 0.18);
+      box-shadow: var(--retit-shadow-raised);
       transform: translateY(-1px);
     }
 
@@ -587,22 +582,22 @@ export class GscApp extends LitElement {
     .summary-card .value {
       font-size: 1.6em;
       font-weight: 700;
-      color: #555;
+      color: var(--retit-text);
       line-height: 1;
       letter-spacing: -0.01em;
     }
 
     .summary-card .value.positive {
-      color: #568139;
+      color: var(--retit-green-dark);
     }
     .summary-card .value.negative {
-      color: #c0392b;
+      color: var(--retit-red);
     }
 
     .summary-card .label {
       font-size: 0.72em;
       font-weight: 400;
-      color: #999;
+      color: var(--retit-text-light);
       margin-top: 0.35em;
       text-transform: uppercase;
       letter-spacing: 0.07em;
@@ -612,14 +607,14 @@ export class GscApp extends LitElement {
     .loading {
       text-align: center;
       padding: 5em 2em;
-      color: #999;
+      color: var(--retit-text-light);
     }
 
     .spinner {
       width: 40px;
       height: 40px;
-      border: 3px solid rgba(117, 183, 41, 0.2);
-      border-top-color: #75b729;
+      border: 3px solid color-mix(in srgb, var(--retit-green) 20%, var(--retit-bg));
+      border-top-color: var(--retit-green);
       border-radius: 50%;
       animation: spin 0.75s linear infinite;
       margin: 0 auto 1em;
@@ -638,11 +633,11 @@ export class GscApp extends LitElement {
 
     /* ── Error ──────────────────────────────────────────── */
     .error-msg {
-      background: rgba(192, 57, 43, 0.06);
-      border: 1px solid rgba(192, 57, 43, 0.25);
+      background: color-mix(in srgb, var(--retit-red) 8%, var(--retit-white));
+      border: 1px solid color-mix(in srgb, var(--retit-red) 30%, var(--retit-white));
       border-radius: 3px;
       padding: 0.75em 1.25em;
-      color: #c0392b;
+      color: var(--retit-red);
       font-size: 0.875em;
       font-weight: 400;
       display: flex;
@@ -653,8 +648,8 @@ export class GscApp extends LitElement {
 
     /* ── Footer ─────────────────────────────────────────── */
     footer {
-      background: var(--retit-footer);
-      color: rgba(255, 255, 255, 0.7);
+      background: var(--retit-dark);
+      color: var(--retit-on-dark-text-muted);
       text-align: center;
       padding: 2.5em 2em;
       font-size: 0.85em;
@@ -663,14 +658,14 @@ export class GscApp extends LitElement {
     }
 
     footer a {
-      color: #c3e895;
+      color: var(--retit-green-light);
       text-decoration: none;
-      border-bottom: 1px dotted rgba(195, 232, 149, 0.4);
+      border-bottom: 1px dotted color-mix(in srgb, var(--retit-green-light) 40%, var(--retit-dark));
       transition: color 0.2s;
     }
 
     footer a:hover {
-      color: #75b729;
+      color: var(--retit-green);
       border-bottom-color: transparent;
     }
   `;

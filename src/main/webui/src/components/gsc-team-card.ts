@@ -142,9 +142,9 @@ export class GscTeamCard extends LitElement {
 
     /* ── Card shell ─────────────────────────────────────── */
     .card {
-      background: #fff;
+      background: var(--retit-white);
       border-radius: 3px;
-      box-shadow: 0px 3px 10px 3px rgba(0, 0, 0, 0.08);
+      box-shadow: var(--retit-shadow);
       padding: 1em 1.5em;
       cursor: pointer;
       transition:
@@ -162,12 +162,12 @@ export class GscTeamCard extends LitElement {
       left: 0;
       height: 3px;
       width: 0;
-      background: #568139;
+      background: var(--retit-green-dark);
       transition: width 0.4s ease;
     }
 
     .card:hover {
-      box-shadow: 0px 3px 7px 2px rgba(0, 0, 0, 0.18);
+      box-shadow: var(--retit-shadow-raised);
       transform: scale(1.005);
     }
 
@@ -177,15 +177,15 @@ export class GscTeamCard extends LitElement {
 
     /* Rank-specific top color */
     .card.rank-1::before {
-      background: #d4ac0d;
+      background: var(--retit-gold);
       width: 100%;
     }
     .card.rank-2::before {
-      background: #808080;
+      background: var(--retit-silver);
       width: 100%;
     }
     .card.rank-3::before {
-      background: #a0522d;
+      background: var(--retit-bronze);
       width: 100%;
     }
 
@@ -206,26 +206,26 @@ export class GscTeamCard extends LitElement {
       border-radius: 3px;
       font-size: 1em;
       font-weight: 700;
-      background: rgba(144, 144, 144, 0.1);
-      color: #999;
+      background: var(--retit-bg);
+      color: var(--retit-text-light);
       flex-shrink: 0;
-      border: 1px solid rgba(144, 144, 144, 0.3);
+      border: 1px solid var(--retit-border);
     }
 
     .rank-1 .rank-badge {
-      background: rgba(212, 172, 13, 0.1);
-      color: #9a7b00;
-      border-color: rgba(212, 172, 13, 0.35);
+      background: color-mix(in srgb, var(--retit-gold) 10%, var(--retit-white));
+      color: var(--retit-gold-text);
+      border-color: color-mix(in srgb, var(--retit-gold) 35%, var(--retit-white));
     }
     .rank-2 .rank-badge {
-      background: rgba(128, 128, 128, 0.1);
-      color: #555;
-      border-color: rgba(128, 128, 128, 0.3);
+      background: color-mix(in srgb, var(--retit-silver) 10%, var(--retit-white));
+      color: var(--retit-text);
+      border-color: color-mix(in srgb, var(--retit-silver) 30%, var(--retit-white));
     }
     .rank-3 .rank-badge {
-      background: rgba(160, 82, 45, 0.1);
-      color: #7a3b1a;
-      border-color: rgba(160, 82, 45, 0.3);
+      background: color-mix(in srgb, var(--retit-bronze) 10%, var(--retit-white));
+      color: var(--retit-bronze-text);
+      border-color: color-mix(in srgb, var(--retit-bronze) 30%, var(--retit-white));
     }
 
     .team-icon {
@@ -242,7 +242,7 @@ export class GscTeamCard extends LitElement {
     .team-name {
       font-size: 1em;
       font-weight: 600;
-      color: #555;
+      color: var(--retit-text);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -269,12 +269,12 @@ export class GscTeamCard extends LitElement {
     .metric .value {
       font-size: 1.05em;
       font-weight: 600;
-      color: #555;
+      color: var(--retit-text);
     }
 
     .metric .label {
       font-size: 0.68em;
-      color: #999;
+      color: var(--retit-text-light);
       text-transform: uppercase;
       letter-spacing: 0.06em;
       margin-top: 1px;
@@ -282,13 +282,13 @@ export class GscTeamCard extends LitElement {
     }
 
     .reduction.positive {
-      color: #568139;
+      color: var(--retit-green-dark);
     }
     .reduction.negative {
-      color: #c0392b;
+      color: var(--retit-red);
     }
     .reduction.neutral {
-      color: #999;
+      color: var(--retit-text-light);
     }
 
     /* Achievements */
@@ -300,7 +300,7 @@ export class GscTeamCard extends LitElement {
     /* Expand chevron */
     .chevron {
       font-size: 0.7em;
-      color: #bbb;
+      color: var(--retit-text-light);
       transition: transform 0.2s ease;
       flex-shrink: 0;
     }
@@ -313,7 +313,7 @@ export class GscTeamCard extends LitElement {
     .expand-section {
       margin-top: 1em;
       padding-top: 1em;
-      border-top: 1px solid rgba(144, 144, 144, 0.25);
+      border-top: 1px solid var(--retit-border);
       display: grid;
       gap: 1em;
     }
@@ -321,7 +321,7 @@ export class GscTeamCard extends LitElement {
     .expand-label {
       font-size: 0.7em;
       font-weight: 600;
-      color: #999;
+      color: var(--retit-text-light);
       text-transform: uppercase;
       letter-spacing: 0.08em;
       margin-bottom: 0.4em;
@@ -335,8 +335,8 @@ export class GscTeamCard extends LitElement {
     }
 
     .provider-chip {
-      background: #f9f9f9;
-      border: 1px solid rgba(144, 144, 144, 0.3);
+      background: var(--retit-bg);
+      border: 1px solid var(--retit-border);
       border-radius: 3px;
       padding: 0.65em 0.75em;
       text-align: center;
@@ -346,13 +346,13 @@ export class GscTeamCard extends LitElement {
     }
 
     .provider-chip:hover {
-      border-color: #75b729;
-      box-shadow: 0 1px 4px rgba(117, 183, 41, 0.15);
+      border-color: var(--retit-green);
+      box-shadow: 0 1px 4px color-mix(in srgb, var(--retit-green) 15%, transparent);
     }
 
     .provider-chip .pname {
       font-size: 0.7em;
-      color: #999;
+      color: var(--retit-text-light);
       text-transform: uppercase;
       letter-spacing: 0.05em;
       font-weight: 400;
@@ -362,7 +362,7 @@ export class GscTeamCard extends LitElement {
     .provider-chip .pvalue {
       font-size: 0.95em;
       font-weight: 600;
-      color: #555;
+      color: var(--retit-text);
     }
 
     /* Share bar */
@@ -370,19 +370,19 @@ export class GscTeamCard extends LitElement {
       display: flex;
       justify-content: space-between;
       font-size: 0.75em;
-      color: #999;
+      color: var(--retit-text-light);
       font-weight: 400;
       margin-bottom: 0.3em;
     }
 
     .share-bar-label span:last-child {
-      color: #555;
+      color: var(--retit-text);
       font-weight: 600;
     }
 
     .share-bar-track {
       height: 5px;
-      background: rgba(144, 144, 144, 0.15);
+      background: var(--retit-border);
       border-radius: 3px;
       overflow: hidden;
     }
