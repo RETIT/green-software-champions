@@ -154,7 +154,12 @@ export class GscTeamCard extends LitElement {
       overflow: hidden;
     }
 
-    /* top accent bar that expands on hover */
+    .card:hover {
+      box-shadow: var(--retit-shadow-raised);
+      transform: scale(1.005);
+    }
+
+    /* top accent bar, only shown for the top three ranks */
     .card::before {
       content: "";
       position: absolute;
@@ -162,17 +167,6 @@ export class GscTeamCard extends LitElement {
       left: 0;
       height: 3px;
       width: 0;
-      background: var(--retit-green-dark);
-      transition: width 0.4s ease;
-    }
-
-    .card:hover {
-      box-shadow: var(--retit-shadow-raised);
-      transform: scale(1.005);
-    }
-
-    .card:hover::before {
-      width: 100%;
     }
 
     /* Rank-specific top color */
@@ -213,19 +207,43 @@ export class GscTeamCard extends LitElement {
     }
 
     .rank-1 .rank-badge {
-      background: color-mix(in srgb, var(--retit-gold) 10%, var(--retit-surface));
+      background: color-mix(
+        in srgb,
+        var(--retit-gold) 10%,
+        var(--retit-surface)
+      );
       color: var(--retit-gold-text);
-      border-color: color-mix(in srgb, var(--retit-gold) 35%, var(--retit-surface));
+      border-color: color-mix(
+        in srgb,
+        var(--retit-gold) 35%,
+        var(--retit-surface)
+      );
     }
     .rank-2 .rank-badge {
-      background: color-mix(in srgb, var(--retit-silver) 10%, var(--retit-surface));
+      background: color-mix(
+        in srgb,
+        var(--retit-silver) 10%,
+        var(--retit-surface)
+      );
       color: var(--retit-text);
-      border-color: color-mix(in srgb, var(--retit-silver) 30%, var(--retit-surface));
+      border-color: color-mix(
+        in srgb,
+        var(--retit-silver) 30%,
+        var(--retit-surface)
+      );
     }
     .rank-3 .rank-badge {
-      background: color-mix(in srgb, var(--retit-bronze) 10%, var(--retit-surface));
+      background: color-mix(
+        in srgb,
+        var(--retit-bronze) 10%,
+        var(--retit-surface)
+      );
       color: var(--retit-bronze-text);
-      border-color: color-mix(in srgb, var(--retit-bronze) 30%, var(--retit-surface));
+      border-color: color-mix(
+        in srgb,
+        var(--retit-bronze) 30%,
+        var(--retit-surface)
+      );
     }
 
     .team-icon {
@@ -340,14 +358,6 @@ export class GscTeamCard extends LitElement {
       border-radius: 3px;
       padding: 0.65em 0.75em;
       text-align: center;
-      transition:
-        border-color 0.15s,
-        box-shadow 0.15s;
-    }
-
-    .provider-chip:hover {
-      border-color: var(--retit-green);
-      box-shadow: 0 1px 4px color-mix(in srgb, var(--retit-green) 15%, transparent);
     }
 
     .provider-chip .pname {

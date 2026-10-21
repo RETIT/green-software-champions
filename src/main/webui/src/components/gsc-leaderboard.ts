@@ -34,19 +34,6 @@ export class GscLeaderboard extends LitElement {
 
       <div class="legend">
         <div class="legend-item">
-          <div class="legend-dot" style="background:var(--retit-green)"></div>
-          <span>Low footprint</span>
-        </div>
-        <div class="legend-item">
-          <div class="legend-dot" style="background:var(--retit-gold)"></div>
-          <span>Medium footprint</span>
-        </div>
-        <div class="legend-item">
-          <div class="legend-dot" style="background:var(--retit-red)"></div>
-          <span>High footprint</span>
-        </div>
-        <div class="legend-divider"></div>
-        <div class="legend-item">
           ↓ reduction is good &nbsp;·&nbsp; ↑ increase needs attention
         </div>
       </div>
@@ -130,19 +117,6 @@ export class GscLeaderboard extends LitElement {
       align-items: center;
       gap: 0.35em;
       font-weight: 400;
-    }
-
-    .legend-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    .legend-divider {
-      width: 1px;
-      height: 12px;
-      background: var(--retit-border);
     }
   `;
 }

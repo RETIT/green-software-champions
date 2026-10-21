@@ -478,7 +478,11 @@ export class GscApp extends LitElement {
 
     .period-selector input[type="month"]:hover,
     .period-selector input[type="month"]:focus {
-      background: color-mix(in srgb, var(--retit-white) 15%, var(--retit-on-dark-fill));
+      background: color-mix(
+        in srgb,
+        var(--retit-white) 15%,
+        var(--retit-on-dark-fill)
+      );
     }
 
     /* ── Hero section ───────────────────────────────────── */
@@ -540,31 +544,6 @@ export class GscApp extends LitElement {
       display: flex;
       align-items: flex-start;
       gap: 1em;
-      transition:
-        box-shadow 0.2s,
-        transform 0.2s;
-      position: relative;
-    }
-
-    .summary-card::before {
-      content: "";
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 0;
-      height: 3px;
-      background: var(--retit-green-dark);
-      border-radius: 3px 3px 0 0;
-      transition: width 0.4s ease;
-    }
-
-    .summary-card:hover {
-      box-shadow: var(--retit-shadow-raised);
-      transform: translateY(-1px);
-    }
-
-    .summary-card:hover::before {
-      width: 100%;
     }
 
     .summary-card-icon {
@@ -613,7 +592,8 @@ export class GscApp extends LitElement {
     .spinner {
       width: 40px;
       height: 40px;
-      border: 3px solid color-mix(in srgb, var(--retit-green) 20%, var(--retit-bg));
+      border: 3px solid
+        color-mix(in srgb, var(--retit-green) 20%, var(--retit-bg));
       border-top-color: var(--retit-green);
       border-radius: 50%;
       animation: spin 0.75s linear infinite;
@@ -634,7 +614,8 @@ export class GscApp extends LitElement {
     /* ── Error ──────────────────────────────────────────── */
     .error-msg {
       background: color-mix(in srgb, var(--retit-red) 8%, var(--retit-surface));
-      border: 1px solid color-mix(in srgb, var(--retit-red) 30%, var(--retit-surface));
+      border: 1px solid
+        color-mix(in srgb, var(--retit-red) 30%, var(--retit-surface));
       border-radius: 3px;
       padding: 0.75em 1.25em;
       color: var(--retit-red);
@@ -660,7 +641,8 @@ export class GscApp extends LitElement {
     footer a {
       color: var(--retit-green-light);
       text-decoration: none;
-      border-bottom: 1px dotted color-mix(in srgb, var(--retit-green-light) 40%, var(--retit-dark));
+      border-bottom: 1px dotted
+        color-mix(in srgb, var(--retit-green-light) 40%, var(--retit-dark));
       transition: color 0.2s;
     }
 

@@ -248,7 +248,11 @@ export class GscWorldMap extends LitElement {
     /* Map colors aligned to RETIT light theme */
     .land {
       fill: var(--retit-map-land);
-      stroke: color-mix(in srgb, var(--retit-map-land) 70%, var(--retit-green-dark));
+      stroke: color-mix(
+        in srgb,
+        var(--retit-map-land) 70%,
+        var(--retit-green-dark)
+      );
       stroke-width: 0.5;
     }
 
@@ -332,7 +336,11 @@ export class GscWorldMap extends LitElement {
 
     .legend-circle {
       border-radius: 50%;
-      background: color-mix(in srgb, var(--retit-green-dark) 25%, var(--retit-bg));
+      background: color-mix(
+        in srgb,
+        var(--retit-green-dark) 25%,
+        var(--retit-bg)
+      );
       border: 2px solid var(--retit-green-dark);
     }
 
