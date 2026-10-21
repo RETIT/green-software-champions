@@ -99,7 +99,7 @@ export class GscLeaderboard extends LitElement {
       text-align: center;
       padding: 4em 2em;
       color: var(--retit-text-light);
-      background: var(--retit-white);
+      background: var(--retit-surface);
       border-radius: 3px;
       box-shadow: var(--retit-shadow);
     }

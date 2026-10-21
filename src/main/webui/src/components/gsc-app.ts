@@ -533,7 +533,7 @@ export class GscApp extends LitElement {
     }
 
     .summary-card {
-      background: var(--retit-white);
+      background: var(--retit-surface);
       border-radius: 3px;
       box-shadow: var(--retit-shadow);
       padding: 1.25em 1.5em;
@@ -633,8 +633,8 @@ export class GscApp extends LitElement {
 
     /* ── Error ──────────────────────────────────────────── */
     .error-msg {
-      background: color-mix(in srgb, var(--retit-red) 8%, var(--retit-white));
-      border: 1px solid color-mix(in srgb, var(--retit-red) 30%, var(--retit-white));
+      background: color-mix(in srgb, var(--retit-red) 8%, var(--retit-surface));
+      border: 1px solid color-mix(in srgb, var(--retit-red) 30%, var(--retit-surface));
       border-radius: 3px;
       padding: 0.75em 1.25em;
       color: var(--retit-red);

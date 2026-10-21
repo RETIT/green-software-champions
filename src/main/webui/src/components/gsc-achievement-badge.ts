@@ -36,8 +36,8 @@ export class GscAchievementBadge extends LitElement {
       display: inline-flex;
       align-items: center;
       gap: 0.3em;
-      background: color-mix(in srgb, var(--retit-gold) 10%, var(--retit-white));
-      border: 1px solid color-mix(in srgb, var(--retit-gold) 35%, var(--retit-white));
+      background: color-mix(in srgb, var(--retit-gold) 10%, var(--retit-surface));
+      border: 1px solid color-mix(in srgb, var(--retit-gold) 35%, var(--retit-surface));
       border-radius: 3px;
       padding: 0.15em 0.6em;
       font-size: 0.78em;
@@ -50,8 +50,8 @@ export class GscAchievementBadge extends LitElement {
     }
 
     .badge:hover {
-      background: color-mix(in srgb, var(--retit-gold) 18%, var(--retit-white));
-      border-color: color-mix(in srgb, var(--retit-gold) 60%, var(--retit-white));
+      background: color-mix(in srgb, var(--retit-gold) 18%, var(--retit-surface));
+      border-color: color-mix(in srgb, var(--retit-gold) 60%, var(--retit-surface));
       box-shadow: 0 1px 4px color-mix(in srgb, var(--retit-gold) 20%, transparent);
     }
 

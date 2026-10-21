@@ -231,7 +231,7 @@ export class GscWorldMap extends LitElement {
     }
 
     .map-container {
-      background: var(--retit-white);
+      background: var(--retit-surface);
       border-radius: 3px;
       box-shadow: var(--retit-shadow);
       padding: 1.5em;
@@ -339,7 +339,7 @@ export class GscWorldMap extends LitElement {
     /* Tooltip */
     .tooltip {
       position: absolute;
-      background: var(--retit-white);
+      background: var(--retit-surface);
       border: 1px solid var(--retit-border);
       border-radius: 3px;
       padding: 0.7em 1em;

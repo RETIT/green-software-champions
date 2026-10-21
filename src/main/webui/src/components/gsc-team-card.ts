@@ -142,7 +142,7 @@ export class GscTeamCard extends LitElement {
 
     /* ── Card shell ─────────────────────────────────────── */
     .card {
-      background: var(--retit-white);
+      background: var(--retit-surface);
       border-radius: 3px;
       box-shadow: var(--retit-shadow);
       padding: 1em 1.5em;
@@ -213,19 +213,19 @@ export class GscTeamCard extends LitElement {
     }
 
     .rank-1 .rank-badge {
-      background: color-mix(in srgb, var(--retit-gold) 10%, var(--retit-white));
+      background: color-mix(in srgb, var(--retit-gold) 10%, var(--retit-surface));
       color: var(--retit-gold-text);
-      border-color: color-mix(in srgb, var(--retit-gold) 35%, var(--retit-white));
+      border-color: color-mix(in srgb, var(--retit-gold) 35%, var(--retit-surface));
     }
     .rank-2 .rank-badge {
-      background: color-mix(in srgb, var(--retit-silver) 10%, var(--retit-white));
+      background: color-mix(in srgb, var(--retit-silver) 10%, var(--retit-surface));
       color: var(--retit-text);
-      border-color: color-mix(in srgb, var(--retit-silver) 30%, var(--retit-white));
+      border-color: color-mix(in srgb, var(--retit-silver) 30%, var(--retit-surface));
     }
     .rank-3 .rank-badge {
-      background: color-mix(in srgb, var(--retit-bronze) 10%, var(--retit-white));
+      background: color-mix(in srgb, var(--retit-bronze) 10%, var(--retit-surface));
       color: var(--retit-bronze-text);
-      border-color: color-mix(in srgb, var(--retit-bronze) 30%, var(--retit-white));
+      border-color: color-mix(in srgb, var(--retit-bronze) 30%, var(--retit-surface));
     }
 
     .team-icon {
