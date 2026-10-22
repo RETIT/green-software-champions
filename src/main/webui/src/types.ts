@@ -1,13 +1,3 @@
-export type AchievementType =
-  | "FIRST_NET_ZERO"
-  | "HIGHEST_REDUCTION"
-  | "CONSECUTIVE_CHAMPION"
-  | "GREEN_STREAK"
-  | "LEADERBOARD_LEADER"
-  | "BIG_SAVER"
-  | "EFFICIENCY_EXPERT"
-  | "CUSTOM";
-
 export interface Achievement {
   id: number;
   title: string;
@@ -15,7 +5,7 @@ export interface Achievement {
   badgeIcon: string | null;
   /** ISO-8601 timestamp */
   earnedAt: string;
-  type: AchievementType | null;
+  type: string | null;
 }
 
 export interface LeaderboardEntry {

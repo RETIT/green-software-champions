@@ -19,6 +19,9 @@ export class GscTeamCard extends LitElement {
     if (!e) return html``;
     const rankClass = e.rank <= 3 ? `rank-${e.rank}` : "";
 
+    const achievements = e.achievements || [];
+    const hiddenAchievements = achievements.slice(3);
+
     return html`
       <div
         class="card ${rankClass}"
@@ -32,6 +35,31 @@ export class GscTeamCard extends LitElement {
           <div class="team-info">
             <div class="team-name">${e.teamName}</div>
             <div class="team-color-bar" style="background:${e.teamColor}"></div>
+          </div>
+
+          <div class="achievements">
+            ${achievements
+              .slice(0, 3)
+              .map(
+                (a) => html`
+                  <gsc-achievement-badge
+                    .achievement="${a}"
+                    compact
+                  ></gsc-achievement-badge>
+                `,
+              )}
+            ${
+              hiddenAchievements.length > 0
+                ? html`
+                    <span
+                      class="more-achievements"
+                      title="${hiddenAchievements.map((a) => a.title).join(",\n")}"
+                    >
+                      +${hiddenAchievements.length}
+                    </span>
+                  `
+                : ""
+            }
           </div>
 
           <div class="metrics">
@@ -51,19 +79,6 @@ export class GscTeamCard extends LitElement {
               <div class="value">${formatPercent(e.companySharePercent)}</div>
               <div class="label">Company Share</div>
             </div>
-          </div>
-
-          <div class="achievements">
-            ${(e.achievements || [])
-              .slice(0, 3)
-              .map(
-                (a) => html`
-                  <gsc-achievement-badge
-                    .achievement="${a}"
-                    compact
-                  ></gsc-achievement-badge>
-                `,
-              )}
           </div>
 
           <span class="chevron ${this.expanded ? "open" : ""}">▼</span>
@@ -312,7 +327,16 @@ export class GscTeamCard extends LitElement {
     /* Achievements */
     .achievements {
       display: flex;
+      align-items: center;
       gap: 0.3em;
+    }
+
+    .more-achievements {
+      font-size: 0.8em;
+      font-weight: 600;
+      color: var(--retit-text-light);
+      white-space: nowrap;
+      cursor: help;
     }
 
     /* Expand chevron */
