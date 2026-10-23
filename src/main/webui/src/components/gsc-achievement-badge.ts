@@ -1,5 +1,6 @@
-import { LitElement, css, html } from "lit";
+import { LitElement, css, html, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
+import { classMap } from "lit/directives/class-map.js";
 import type { Achievement } from "../types.ts";
 
 /**
@@ -13,15 +14,15 @@ export class GscAchievementBadge extends LitElement {
 
   override render() {
     const a = this.achievement;
-    if (!a) return html``;
+    if (!a) return nothing;
 
     return html`
       <span
-        class="badge ${this.compact ? "compact" : ""}"
+        class="badge ${classMap({ compact: this.compact })}"
         title="${a.description || a.title}"
       >
         <span class="icon">${a.badgeIcon || "🏅"}</span>
-        ${!this.compact ? html`<span class="title">${a.title}</span>` : ""}
+        ${!this.compact ? html`<span class="title">${a.title}</span>` : nothing}
       </span>
     `;
   }

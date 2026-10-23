@@ -1,5 +1,7 @@
-import { LitElement, css, html } from "lit";
+import { LitElement, css, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { classMap } from "lit/directives/class-map.js";
+import { styleMap } from "lit/directives/style-map.js";
 import type { LeaderboardEntry } from "../types.ts";
 import {
   formatCo2,
@@ -12,21 +14,21 @@ import "./gsc-achievement-badge.ts";
 @customElement("gsc-team-card")
 export class GscTeamCard extends LitElement {
   @property({ type: Object }) entry?: LeaderboardEntry;
-  @state() expanded = false;
+  @state() private _expanded = false;
 
   override render() {
     const e = this.entry;
-    if (!e) return html``;
-    const rankClass = e.rank <= 3 ? `rank-${e.rank}` : "";
+    if (!e) return nothing;
 
     const achievements = e.achievements || [];
     const hiddenAchievements = achievements.slice(3);
 
     return html`
       <div
-        class="card ${rankClass}"
+        class="card ${classMap({ [`rank-${e.rank}`]: e.rank <= 3 })}"
+        style="${styleMap({ "--team-color": e.teamColor })}"
         @click="${() => {
-          this.expanded = !this.expanded;
+          this._expanded = !this._expanded;
         }}"
       >
         <div class="top-row">
@@ -34,7 +36,7 @@ export class GscTeamCard extends LitElement {
           <div class="team-icon">${e.teamIcon || "🌍"}</div>
           <div class="team-info">
             <div class="team-name">${e.teamName}</div>
-            <div class="team-color-bar" style="background:${e.teamColor}"></div>
+            <div class="team-color-bar"></div>
           </div>
 
           <div class="achievements">
@@ -58,7 +60,7 @@ export class GscTeamCard extends LitElement {
                       +${hiddenAchievements.length}
                     </span>
                   `
-                : ""
+                : nothing
             }
           </div>
 
@@ -81,11 +83,11 @@ export class GscTeamCard extends LitElement {
             </div>
           </div>
 
-          <span class="chevron ${this.expanded ? "open" : ""}">▼</span>
+          <span class="chevron ${classMap({ open: this._expanded })}">▼</span>
         </div>
 
         ${
-          this.expanded
+          this._expanded
             ? html`
                 <div class="expand-section">
                   <div>
@@ -99,7 +101,9 @@ export class GscTeamCard extends LitElement {
                     <div class="share-bar-track">
                       <div
                         class="share-bar-fill"
-                        style="width:${Math.min(e.companySharePercent || 0, 100)}%;background:${e.teamColor}"
+                        style="${styleMap({
+                          width: `${Math.min(e.companySharePercent || 0, 100)}%`,
+                        })}"
                       ></div>
                     </div>
                   </div>
@@ -127,7 +131,7 @@ export class GscTeamCard extends LitElement {
                       ? html`
                           <div>
                             <div class="expand-label">🏅 Achievements</div>
-                            <div style="display:flex;gap:0.5em;flex-wrap:wrap">
+                            <div class="achievement-list">
                               ${e.achievements.map(
                                 (a) => html`
                                   <gsc-achievement-badge
@@ -138,11 +142,11 @@ export class GscTeamCard extends LitElement {
                             </div>
                           </div>
                         `
-                      : ""
+                      : nothing
                   }
                 </div>
               `
-            : ""
+            : nothing
         }
       </div>
     `;
@@ -282,6 +286,7 @@ export class GscTeamCard extends LitElement {
     }
 
     .team-color-bar {
+      background: var(--team-color);
       height: 2px;
       border-radius: 1px;
       margin-top: 4px;
@@ -337,6 +342,12 @@ export class GscTeamCard extends LitElement {
       color: var(--retit-text-light);
       white-space: nowrap;
       cursor: help;
+    }
+
+    .achievement-list {
+      display: flex;
+      gap: 0.5em;
+      flex-wrap: wrap;
     }
 
     /* Expand chevron */
@@ -422,6 +433,7 @@ export class GscTeamCard extends LitElement {
     }
 
     .share-bar-fill {
+      background: var(--team-color);
       height: 100%;
       border-radius: 3px;
       transition: width 0.8s ease;

@@ -1,6 +1,8 @@
 import { Task } from "@lit/task";
-import { LitElement, css, html } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import { LitElement, css, html, nothing } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
+import { classMap } from "lit/directives/class-map.js";
+import { live } from "lit/directives/live.js";
 import type { LeaderboardEntry, LeaderboardSummary } from "../types.ts";
 import {
   formatCo2,
@@ -32,7 +34,7 @@ const TREND_ICON: Record<Trend, string> = {
 @customElement("gsc-app")
 export class GscApp extends LitElement {
   @property({ type: String }) period = this._currentPeriod();
-  @property({ type: String }) activeView: View = "leaderboard";
+  @state() private _activeView: View = "leaderboard";
 
   /**
    * Reruns whenever `period` changes. A new run aborts the in-flight fetches
@@ -162,9 +164,10 @@ export class GscApp extends LitElement {
 
   private _onPeriodChange(e: Event) {
     const input = e.target as HTMLInputElement;
-    // A cleared month input yields "", which is not a valid period.
+    // A cleared month input yields "", which is not a valid period. The
+    // period itself is unchanged, so re-render to let live() restore it.
     if (!input.value) {
-      input.value = this.period;
+      this.requestUpdate();
       return;
     }
     // Setting the period reruns the data task.
@@ -183,7 +186,7 @@ export class GscApp extends LitElement {
                 <span>${error} — Showing demo data.</span>
               </div>
             `
-          : ""
+          : nothing
       }
       <div class="summary-bar">
         <div class="summary-card">
@@ -212,13 +215,13 @@ export class GscApp extends LitElement {
         <div class="summary-card">
           <div class="summary-card-icon">📅</div>
           <div class="summary-card-body">
-            <div class="value" style="font-size:1.1em">${this.period}</div>
+            <div class="value period">${this.period}</div>
             <div class="label">Current Period</div>
           </div>
         </div>
       </div>
       ${
-        this.activeView === "leaderboard"
+        this._activeView === "leaderboard"
           ? html`
               <gsc-leaderboard
                 .entries="${leaderboard}"
@@ -276,17 +279,19 @@ export class GscApp extends LitElement {
 
         <nav>
           <button
-            class="nav-btn ${this.activeView === "leaderboard" ? "active" : ""}"
+            class="nav-btn ${classMap({
+              active: this._activeView === "leaderboard",
+            })}"
             @click="${() => {
-              this.activeView = "leaderboard";
+              this._activeView = "leaderboard";
             }}"
           >
             🏆 Leaderboard
           </button>
           <button
-            class="nav-btn ${this.activeView === "map" ? "active" : ""}"
+            class="nav-btn ${classMap({ active: this._activeView === "map" })}"
             @click="${() => {
-              this.activeView = "map";
+              this._activeView = "map";
             }}"
           >
             🗺️ World Map
@@ -298,7 +303,7 @@ export class GscApp extends LitElement {
           <input
             type="month"
             id="period"
-            .value="${this.period}"
+            .value="${live(this.period)}"
             @change="${this._onPeriodChange}"
           />
         </div>
@@ -564,6 +569,10 @@ export class GscApp extends LitElement {
       color: var(--retit-text);
       line-height: 1;
       letter-spacing: -0.01em;
+    }
+
+    .summary-card .value.period {
+      font-size: 1.1em;
     }
 
     .summary-card .value.positive {

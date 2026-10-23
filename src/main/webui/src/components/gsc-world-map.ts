@@ -1,5 +1,8 @@
-import { LitElement, css, html, svg } from "lit";
-import { customElement, property, query } from "lit/decorators.js";
+import { LitElement, css, html, nothing, svg } from "lit";
+import { customElement, property, query, state } from "lit/decorators.js";
+import { classMap } from "lit/directives/class-map.js";
+import { repeat } from "lit/directives/repeat.js";
+import { styleMap } from "lit/directives/style-map.js";
 import type { LeaderboardEntry } from "../types.ts";
 import {
   formatCo2,
@@ -28,7 +31,12 @@ export class GscWorldMap extends LitElement {
 
   @query(".map-container") private _container!: HTMLElement;
 
-  private _tooltip: Tooltip = { visible: false, x: 0, y: 0, entry: null };
+  @state() private _tooltip: Tooltip = {
+    visible: false,
+    x: 0,
+    y: 0,
+    entry: null,
+  };
 
   private _teamRegions(): Point[] {
     return [
@@ -60,12 +68,10 @@ export class GscWorldMap extends LitElement {
     const x = e.clientX - rect.left + 12;
     const y = e.clientY - rect.top + 12;
     this._tooltip = { visible: true, x, y, entry };
-    this.requestUpdate();
   }
 
   private _hideTooltip() {
     this._tooltip = { ...this._tooltip, visible: false };
-    this.requestUpdate();
   }
 
   private _renderMapPaths() {
@@ -116,10 +122,13 @@ export class GscWorldMap extends LitElement {
       <div class="map-container" @mouseleave="${this._hideTooltip}">
         <svg viewBox="0 0 960 500" xmlns="http://www.w3.org/2000/svg">
           ${this._renderMapPaths()}
-          ${(this.entries || []).map((entry, i) => {
-            const pos = this._getPosition(i);
-            const r = this._bubbleRadius(entry.companySharePercent);
-            return svg`
+          ${repeat(
+            this.entries || [],
+            (entry) => entry.teamId,
+            (entry, i) => {
+              const pos = this._getPosition(i);
+              const r = this._bubbleRadius(entry.companySharePercent);
+              return svg`
               <g class="team-bubble"
                  @mouseenter="${(e: MouseEvent) => this._showTooltip(e, entry)}"
                  @mousemove="${(e: MouseEvent) => this._showTooltip(e, entry)}"
@@ -130,7 +139,7 @@ export class GscWorldMap extends LitElement {
                   <circle class="pulse-ring" cx="${pos.x}" cy="${pos.y}"
                           stroke="${entry.teamColor}" opacity="0.5" r="${r}"/>
                 `
-                    : ""
+                    : nothing
                 }
                 <circle cx="${pos.x}" cy="${pos.y}" r="${r}"
                         fill="${entry.teamColor}"
@@ -142,12 +151,13 @@ export class GscWorldMap extends LitElement {
                 </text>
               </g>
             `;
-          })}
+            },
+          )}
         </svg>
 
         <div
-          class="tooltip ${t.visible ? "" : "hidden"}"
-          style="left:${t.x}px;top:${t.y}px"
+          class="tooltip ${classMap({ hidden: !t.visible })}"
+          style="${styleMap({ left: `${t.x}px`, top: `${t.y}px` })}"
         >
           ${
             t.entry
@@ -172,17 +182,14 @@ export class GscWorldMap extends LitElement {
                   ${
                     t.entry.achievements && t.entry.achievements.length > 0
                       ? html`
-                          <div
-                            class="tooltip-row"
-                            style="justify-content:flex-start;gap:0.25em;margin-top:0.3em"
-                          >
+                          <div class="tooltip-row tooltip-achievements">
                             ${t.entry.achievements.map((a) => html`<span title="${a.title}">${a.badgeIcon || "🏅"}</span>`)}
                           </div>
                         `
-                      : ""
+                      : nothing
                   }
                 `
-              : ""
+              : nothing
           }
         </div>
       </div>
@@ -190,11 +197,11 @@ export class GscWorldMap extends LitElement {
       <div class="legend">
         <span>Bubble size = share of company cloud carbon</span>
         <div class="legend-bubble-demo">
-          <div class="legend-circle" style="width:10px;height:10px"></div>
+          <div class="legend-circle small"></div>
           <span>Smaller share</span>
         </div>
         <div class="legend-bubble-demo">
-          <div class="legend-circle" style="width:26px;height:26px"></div>
+          <div class="legend-circle large"></div>
           <span>Larger share</span>
         </div>
         <span>📍 Bubbles positioned at primary cloud region</span>
@@ -344,6 +351,16 @@ export class GscWorldMap extends LitElement {
       border: 2px solid var(--retit-green-dark);
     }
 
+    .legend-circle.small {
+      width: 10px;
+      height: 10px;
+    }
+
+    .legend-circle.large {
+      width: 26px;
+      height: 26px;
+    }
+
     /* Tooltip */
     .tooltip {
       position: absolute;
@@ -378,6 +395,12 @@ export class GscWorldMap extends LitElement {
       font-weight: 400;
       margin-top: 0.15em;
       font-size: 0.9em;
+    }
+
+    .tooltip-achievements {
+      justify-content: flex-start;
+      gap: 0.25em;
+      margin-top: 0.3em;
     }
 
     .tooltip-row span:last-child {

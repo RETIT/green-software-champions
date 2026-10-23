@@ -1,5 +1,6 @@
 import { LitElement, css, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
+import { repeat } from "lit/directives/repeat.js";
 import type { LeaderboardEntry } from "../types.ts";
 import "./gsc-team-card.ts";
 
@@ -39,7 +40,9 @@ export class GscLeaderboard extends LitElement {
       </div>
 
       <div class="leaderboard-grid">
-        ${this.entries.map(
+        ${repeat(
+          this.entries,
+          (entry) => entry.teamId,
           (entry) => html` <gsc-team-card .entry="${entry}"></gsc-team-card> `,
         )}
       </div>
