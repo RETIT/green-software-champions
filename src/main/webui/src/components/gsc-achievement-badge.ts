@@ -30,7 +30,7 @@ export class GscAchievementBadge extends LitElement {
   static override styles = css`
     :host {
       display: inline-block;
-      font-family: "Source Sans 3", "Source Sans Pro", Helvetica, sans-serif;
+      font-family: var(--retit-font);
     }
 
     .badge {

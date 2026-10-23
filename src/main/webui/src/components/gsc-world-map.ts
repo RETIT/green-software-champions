@@ -212,7 +212,7 @@ export class GscWorldMap extends LitElement {
   static override styles = css`
     :host {
       display: block;
-      font-family: "Source Sans 3", "Source Sans Pro", Helvetica, sans-serif;
+      font-family: var(--retit-font);
       font-weight: 300;
     }
 
@@ -302,7 +302,7 @@ export class GscWorldMap extends LitElement {
       font-size: 9px;
       text-anchor: middle;
       pointer-events: none;
-      font-family: "Source Sans 3", "Source Sans Pro", sans-serif;
+      font-family: var(--retit-font);
       font-weight: 600;
     }
 

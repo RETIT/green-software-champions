@@ -52,7 +52,7 @@ export class GscLeaderboard extends LitElement {
   static override styles = css`
     :host {
       display: block;
-      font-family: "Source Sans 3", "Source Sans Pro", Helvetica, sans-serif;
+      font-family: var(--retit-font);
       font-weight: 300;
     }
 

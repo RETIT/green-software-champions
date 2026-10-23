@@ -364,7 +364,7 @@ export class GscApp extends LitElement {
       display: block;
       min-height: 100vh;
       background: var(--retit-bg);
-      font-family: "Source Sans 3", "Source Sans Pro", Helvetica, sans-serif;
+      font-family: var(--retit-font);
       font-weight: 300;
       color: var(--retit-text);
     }
