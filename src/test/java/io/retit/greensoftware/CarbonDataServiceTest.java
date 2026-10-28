@@ -2,7 +2,9 @@ package io.retit.greensoftware;
 
 import io.retit.greensoftware.client.AwsCarbonProvider;
 import io.retit.greensoftware.client.CarbonDataUnavailableException;
+import io.retit.greensoftware.config.CarbonSyncConfig;
 import io.retit.greensoftware.entity.Achievement;
+import io.retit.greensoftware.entity.AchievementEvaluation;
 import io.retit.greensoftware.entity.AchievementType;
 import io.retit.greensoftware.entity.CarbonEntry;
 import io.retit.greensoftware.entity.CloudProject;
@@ -36,19 +38,23 @@ class CarbonDataServiceTest {
     @Inject
     CarbonDataService carbonDataService;
 
+    @Inject
+    CarbonSyncConfig syncConfig;
+
     private static final String TEAM_ALPHA = "Team Alpha";
     private static final String TEAM_GAMMA = "Team Gamma";
     /** Team Beta's AWS account from application.yaml. */
     private static final String BETA_AWS_PROJECT = "234567890123";
 
     private FakeAwsProvider aws;
-    /** The period the scheduled sync fetches. */
+    /** The latest period the scheduled sync fetches. */
     private String period;
 
     @BeforeEach
     @Transactional
     void setUp() {
         Achievement.deleteAll();
+        AchievementEvaluation.deleteAll();
         CarbonEntry.deleteAll();
 
         aws = new FakeAwsProvider();
@@ -57,20 +63,74 @@ class CarbonDataServiceTest {
     }
 
     @Test
-    void syncPreviousPeriod_storesOnlyThePreviousPeriod() {
+    void syncRecentPeriods_storesTheConfiguredNumberOfMonths() {
         aws.co2KgByPeriod.put(period, 100.0);
 
-        carbonDataService.syncPreviousPeriod();
+        List<String> synced = carbonDataService.syncRecentPeriods();
 
+        assertEquals(Periods.window(period, syncConfig.months()), synced);
         QuarkusTransaction.requiringNew().run(() -> {
             CarbonEntry entry = CarbonEntry.findByTeamAndPeriod(Team.findByName(TEAM_ALPHA), period).orElseThrow();
             assertEquals(100.0, entry.totalCo2Kg, 0.001);
             assertEquals(100.0, entry.awsCo2Kg, 0.001);
             assertNull(entry.azureCo2Kg, "Disabled provider should have no data, not 0");
             assertNull(entry.gcpCo2Kg, "Disabled provider should have no data, not 0");
-            assertEquals(CarbonEntry.count(), CarbonEntry.count("period", period),
+            assertEquals(Team.count() * synced.size(), CarbonEntry.count("period in ?1", synced),
+                    "Every team should be synced for every period");
+            assertEquals(CarbonEntry.count(), CarbonEntry.count("period in ?1", synced),
                     "No other period should be synced");
         });
+    }
+
+    @Test
+    void syncRecentPeriods_overwritesOlderPeriodsWithRevisedData() {
+        String oldest = Periods.window(period, syncConfig.months()).getFirst();
+        QuarkusTransaction.requiringNew().run(() ->
+                createEntry(Team.findByName(TEAM_ALPHA), oldest, 999.0));
+        aws.co2KgByPeriod.put(oldest, 100.0);
+
+        carbonDataService.syncRecentPeriods();
+
+        QuarkusTransaction.requiringNew().run(() ->
+                assertEquals(100.0, CarbonEntry.findByTeamAndPeriod(Team.findByName(TEAM_ALPHA), oldest)
+                        .orElseThrow().totalCo2Kg, 0.001, "The revised data should replace the stored entry"));
+    }
+
+    @Test
+    void syncRecentPeriods_keepsExistingDataOfFailedPeriodsOnly() {
+        String older = Periods.previous(period);
+        QuarkusTransaction.requiringNew().run(() -> {
+            createEntry(Team.findByName(TEAM_ALPHA), older, 999.0);
+            createEntry(Team.findByName(TEAM_ALPHA), period, 999.0);
+        });
+        aws.failingPeriods.add(older);
+        aws.co2KgByPeriod.put(period, 100.0);
+
+        carbonDataService.syncRecentPeriods();
+
+        QuarkusTransaction.requiringNew().run(() -> {
+            Team alpha = Team.findByName(TEAM_ALPHA);
+            assertEquals(999.0, CarbonEntry.findByTeamAndPeriod(alpha, older).orElseThrow().totalCo2Kg, 0.001,
+                    "A failed fetch should not overwrite the stored entry");
+            assertEquals(100.0, CarbonEntry.findByTeamAndPeriod(alpha, period).orElseThrow().totalCo2Kg, 0.001,
+                    "The other periods should still be updated");
+        });
+    }
+
+    @Test
+    void syncRecentPeriods_evaluatesEveryCompletePeriodOnce() {
+        carbonDataService.syncRecentPeriods();
+
+        QuarkusTransaction.requiringNew().run(() -> {
+            assertEquals(syncConfig.months(), AchievementEvaluation.count(),
+                    "Every synced period should be evaluated");
+            Achievement.deleteAll();
+        });
+
+        carbonDataService.syncRecentPeriods();
+
+        QuarkusTransaction.requiringNew().run(() ->
+                assertEquals(0, Achievement.count(), "Evaluated periods should not be evaluated again"));
     }
 
     @Test
@@ -146,6 +206,20 @@ class CarbonDataServiceTest {
                     "Teams with published data should still be synced");
             assertEquals(0, Achievement.count(), "Rankings over only some teams should not be awarded");
         });
+    }
+
+    @Test
+    void syncForPeriod_evaluatesAPreviouslyIncompletePeriodOnceComplete() {
+        aws.co2KgByPeriod.put(period, 100.0);
+        aws.failingProjectIds.add(BETA_AWS_PROJECT);
+        carbonDataService.syncForPeriod(period);
+
+        aws.failingProjectIds.clear();
+        carbonDataService.syncForPeriod(period);
+
+        QuarkusTransaction.requiringNew().run(() ->
+                assertEquals(1, Achievement.count("type", AchievementType.LEADERBOARD_LEADER),
+                        "Achievements should be evaluated once the period is complete"));
     }
 
     // -------------------------------------------------------------------------

@@ -111,7 +111,6 @@ export class GscApp extends LitElement {
     const baseCo2 = [1240, 2890, 3450, 980];
     // One period more than charted, so the oldest charted one has a predecessor
     const periods = periodWindow(period, HISTORY_MONTHS + 1);
-    const earnedAt = new Date().toISOString();
     const ranked = teams
       .map((t, i): LeaderboardEntry => {
         // Random walk back from the current period: a random average monthly
@@ -154,7 +153,7 @@ export class GscApp extends LitElement {
                     title: "Carbon Neutral Pioneer",
                     description: null,
                     badgeIcon: "🌍",
-                    earnedAt,
+                    period,
                     type: "FIRST_NET_ZERO",
                   },
                   {
@@ -162,7 +161,7 @@ export class GscApp extends LitElement {
                     title: "Reduction Champion",
                     description: null,
                     badgeIcon: "🏆",
-                    earnedAt,
+                    period,
                     type: "HIGHEST_REDUCTION",
                   },
                 ]
@@ -173,7 +172,7 @@ export class GscApp extends LitElement {
                       title: "Leaderboard Leader",
                       description: null,
                       badgeIcon: "🥇",
-                      earnedAt,
+                      period,
                       type: "LEADERBOARD_LEADER",
                     },
                   ]

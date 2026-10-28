@@ -53,7 +53,7 @@ CREATE TABLE achievements
     title            VARCHAR(255) NOT NULL,
     description      TEXT,
     badge_icon       VARCHAR(100),
-    earned_at        TIMESTAMP WITH TIME ZONE  NOT NULL DEFAULT NOW(),
+    period           VARCHAR(7)   NOT NULL,
     achievement_type VARCHAR(100)
 );
 

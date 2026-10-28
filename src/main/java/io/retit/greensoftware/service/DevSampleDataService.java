@@ -93,7 +93,7 @@ public class DevSampleDataService {
             }
         }
 
-        seedAchievements();
+        seedAchievements(periods.getLast());
         LOG.infof("Dev sample data seeding complete – %d carbon entr%s inserted.",
                 inserted, inserted == 1 ? "y" : "ies");
     }
@@ -107,23 +107,24 @@ public class DevSampleDataService {
     // Achievements
     // -------------------------------------------------------------------------
 
-    private void seedAchievements() {
+    /** Seeds the sample achievements, all awarded for {@code period}. */
+    private void seedAchievements(String period) {
         // Winner: biggest relative reduction
-        insertAchievement("Team Gamma",  "🌱 Green Streak",
+        insertAchievement(period, "Team Gamma",  "🌱 Green Streak",
                 "Three months of consecutive carbon reduction!",     "🌱", AchievementType.GREEN_STREAK);
-        insertAchievement("Team Gamma",  "⚡ Efficiency Expert",
+        insertAchievement(period, "Team Gamma",  "⚡ Efficiency Expert",
                 "Reduced cloud carbon footprint by over 32 % in a single month.", "⚡", AchievementType.EFFICIENCY_EXPERT);
 
         // Runner-up: absolute lowest footprint history
-        insertAchievement("Team Alpha",  "🏆 Leaderboard Leader",
+        insertAchievement(period, "Team Alpha",  "🏆 Leaderboard Leader",
                 "Held the top spot on the leaderboard last month.",  "🏆", AchievementType.LEADERBOARD_LEADER);
 
         // Large team with good absolute saving
-        insertAchievement("Team Delta",  "💧 Big Saver",
+        insertAchievement(period, "Team Delta",  "💧 Big Saver",
                 "Saved over 32 kg CO₂ compared to the previous month.", "💧", AchievementType.BIG_SAVER);
     }
 
-    private void insertAchievement(String teamName, String title, String description,
+    private void insertAchievement(String period, String teamName, String title, String description,
                                    String icon, AchievementType type) {
         Team team = Team.findByName(teamName);
         if (team == null) return;
@@ -134,7 +135,7 @@ public class DevSampleDataService {
             a.title       = title;
             a.description = description;
             a.badgeIcon   = icon;
-            a.earnedAt    = Instant.now();
+            a.period      = period;
             a.type        = type;
             a.persist();
         }

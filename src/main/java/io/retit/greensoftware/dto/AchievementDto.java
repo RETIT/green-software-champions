@@ -1,13 +1,13 @@
 package io.retit.greensoftware.dto;
 
-import java.time.Instant;
-
 public class AchievementDto {
 
     public Long id;
     public String title;
     public String description;
     public String badgeIcon;
-    public Instant earnedAt;
+
+    /** Period (YYYY-MM) the achievement was awarded for. */
+    public String period;
     public String type;
 }

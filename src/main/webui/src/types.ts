@@ -3,8 +3,8 @@ export interface Achievement {
   title: string;
   description: string | null;
   badgeIcon: string | null;
-  /** ISO-8601 timestamp */
-  earnedAt: string;
+  /** YYYY-MM period the achievement was awarded for. */
+  period: string;
   type: string | null;
 }
 

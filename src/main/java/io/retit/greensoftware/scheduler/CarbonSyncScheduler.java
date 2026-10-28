@@ -13,6 +13,8 @@ import org.jboss.logging.Logger;
  * <p>The providers publish a month's data with a delay: GCP by about the 21st,
  * Azure by about the 19th and AWS by about the 21st of the following month.
  * Running on the 25th makes sure the previous month is available everywhere.
+ * Each sync also re-fetches the months before it ({@code carbon.sync.months} in
+ * total), as the providers may revise already published data.
  *
  * <p>The schedule can be overridden in application.yaml via
  * {@code quarkus.scheduler.cron-type} or by providing a custom cron expression
@@ -27,8 +29,8 @@ public class CarbonSyncScheduler {
     CarbonDataService carbonDataService;
 
     /**
-     * Runs on the 25th of each month at 02:00 UTC to sync the previous month's
-     * carbon footprint data from all configured cloud providers.
+     * Runs on the 25th of each month at 02:00 UTC to sync the carbon footprint data
+     * of the recent months from all configured cloud providers.
      *
      * <p>The cron expression {@code 0 0 2 25 * ?} means:
      * at 02:00:00 on the 25th day of every month.
@@ -37,7 +39,7 @@ public class CarbonSyncScheduler {
     void syncCarbonData() {
         LOG.info("Scheduled carbon data sync triggered.");
         try {
-            carbonDataService.syncPreviousPeriod();
+            carbonDataService.syncRecentPeriods();
         } catch (Exception e) {
             LOG.errorf("Carbon data sync failed: %s", e.getMessage(), e);
         }

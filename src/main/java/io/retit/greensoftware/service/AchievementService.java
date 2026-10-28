@@ -10,7 +10,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
 
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -59,7 +58,7 @@ public class AchievementService {
     private void checkFirstNetZero(List<CarbonEntry> entries, String period) {
         for (CarbonEntry entry : entries) {
             if (entry.totalCo2Kg != null && entry.totalCo2Kg <= 0) {
-                grantIfNew(entry.team, AchievementType.FIRST_NET_ZERO,
+                grantIfNew(entry.team, period, AchievementType.FIRST_NET_ZERO,
                         "🌍 Carbon Neutral Pioneer",
                         "Achieved net-zero cloud carbon emissions for period " + period,
                         "🌍");
@@ -71,7 +70,7 @@ public class AchievementService {
     private void checkBigSaver(List<Reduction> reductions, String period) {
         for (Reduction reduction : reductions) {
             if (reduction.percent() >= 20.0) {
-                grantIfNew(reduction.team(), AchievementType.BIG_SAVER,
+                grantIfNew(reduction.team(), period, AchievementType.BIG_SAVER,
                         "📉 Big Saver",
                         String.format("Reduced cloud carbon emissions by %.1f%% in period %s",
                                 reduction.percent(), period),
@@ -86,7 +85,7 @@ public class AchievementService {
                 .max(Comparator.comparingDouble(Reduction::percent))
                 .ifPresent(best -> {
                     if (best.percent() > 0) {
-                        grantIfNew(best.team(), AchievementType.HIGHEST_REDUCTION,
+                        grantIfNew(best.team(), period, AchievementType.HIGHEST_REDUCTION,
                                 "🏆 Reduction Champion",
                                 String.format("Achieved the highest carbon reduction (%.1f%%) in period %s",
                                         best.percent(), period),
@@ -100,17 +99,27 @@ public class AchievementService {
         entries.stream()
                 .filter(e -> e.totalCo2Kg != null)
                 .min(Comparator.comparingDouble(e -> e.totalCo2Kg))
-                .ifPresent(leader -> grantIfNew(leader.team, AchievementType.LEADERBOARD_LEADER,
+                .ifPresent(leader -> grantIfNew(leader.team, period, AchievementType.LEADERBOARD_LEADER,
                         "🥇 Leaderboard Leader",
                         "Lowest cloud carbon footprint in period " + period,
                         "🥇"));
     }
 
-    /** Award "Green Streak" to any team with 6+ consecutive months of reduction. */
+    /**
+     * Award "Green Streak" to any team with 6+ consecutive months of reduction up to
+     * {@code period}. Later periods are ignored, so evaluating an older period does not
+     * count reductions it could not know about.
+     */
     private void checkGreenStreak(String period) {
         List<Team> teams = Team.listAll();
         for (Team team : teams) {
-            List<CarbonEntry> history = CarbonEntry.findByTeamOrderByPeriodDesc(team);
+            List<CarbonEntry> history = CarbonEntry.findByTeamOrderByPeriodDesc(team).stream()
+                    // YYYY-MM strings sort chronologically
+                    .filter(e -> e.period.compareTo(period) <= 0)
+                    .toList();
+            if (history.isEmpty() || !history.getFirst().period.equals(period)) {
+                continue;
+            }
             int consecutiveReductions = 0;
             for (int i = 0; i + 1 < history.size(); i++) {
                 CarbonEntry entry = history.get(i);
@@ -125,12 +134,12 @@ public class AchievementService {
                 consecutiveReductions++;
             }
             if (consecutiveReductions >= 6) {
-                grantIfNew(team, AchievementType.GREEN_STREAK,
+                grantIfNew(team, period, AchievementType.GREEN_STREAK,
                         "🌱 Green Streak",
                         "6 or more consecutive months of carbon reduction",
                         "🌱");
             } else if (consecutiveReductions >= 3) {
-                grantIfNew(team, AchievementType.CONSECUTIVE_CHAMPION,
+                grantIfNew(team, period, AchievementType.CONSECUTIVE_CHAMPION,
                         "⚡ Consistent Champion",
                         "3 or more consecutive months of carbon reduction",
                         "⚡");
@@ -138,8 +147,9 @@ public class AchievementService {
         }
     }
 
-    private void grantIfNew(Team team, AchievementType type, String title,
-                             String description, String badgeIcon) {
+    /** Grants {@code type} to {@code team} for {@code period} unless the team already has it. */
+    private void grantIfNew(Team team, String period, AchievementType type, String title,
+                            String description, String badgeIcon) {
         boolean alreadyGranted = Achievement.count("team = ?1 and type = ?2", team, type) > 0;
         if (!alreadyGranted) {
             Achievement achievement = new Achievement();
@@ -148,14 +158,15 @@ public class AchievementService {
             achievement.title = title;
             achievement.description = description;
             achievement.badgeIcon = badgeIcon;
-            achievement.earnedAt = Instant.now();
+            achievement.period = period;
             achievement.persist();
             LOG.infof("Granted achievement '%s' to team '%s'", title, team.name);
         }
     }
 
     /**
-     * Manually grants a custom achievement to a team (e.g., via admin UI shoutout).
+     * Manually grants a custom achievement to a team (e.g., via admin UI shoutout) for
+     * the current period.
      */
     @Transactional
     public Achievement grantCustomAchievement(Team team, String title, String description,
@@ -166,7 +177,7 @@ public class AchievementService {
         achievement.title = title;
         achievement.description = description;
         achievement.badgeIcon = badgeIcon;
-        achievement.earnedAt = Instant.now();
+        achievement.period = Periods.current();
         achievement.persist();
         return achievement;
     }

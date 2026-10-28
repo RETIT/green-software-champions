@@ -5,6 +5,7 @@ import io.retit.greensoftware.entity.AchievementType;
 import io.retit.greensoftware.entity.CarbonEntry;
 import io.retit.greensoftware.entity.Team;
 import io.retit.greensoftware.service.AchievementService;
+import io.retit.greensoftware.util.Periods;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -154,7 +155,42 @@ class AchievementServiceTest {
         assertNotNull(achievement.id);
         assertEquals("🎉 Special Award", achievement.title);
         assertEquals(AchievementType.CUSTOM, achievement.type);
-        assertNotNull(achievement.earnedAt);
+        assertEquals(Periods.current(), achievement.period,
+                "A custom achievement should be awarded in the current period");
+    }
+
+    @Test
+    @Transactional
+    void evaluateAchievements_awardsForTheEvaluatedPeriod() {
+        Team alpha = Team.findByName(TEAM_ALPHA);
+        assertNotNull(alpha);
+
+        createEntry(alpha, "2024-10", 500.0);
+        achievementService.evaluateAchievements("2024-10");
+
+        Achievement leader = Achievement.find("team = ?1 and type = ?2",
+                alpha, AchievementType.LEADERBOARD_LEADER).firstResult();
+        assertEquals("2024-10", leader.period,
+                "The achievement should carry the evaluated period, not the time of evaluation");
+    }
+
+    @Test
+    @Transactional
+    void evaluateAchievements_streakIgnoresLaterPeriods() {
+        Team alpha = Team.findByName(TEAM_ALPHA);
+        assertNotNull(alpha);
+
+        // Only 2 reductions up to 2025-04, the third one follows in 2025-05
+        createEntry(alpha, "2025-02", 1000.0);
+        createEntry(alpha, "2025-03", 950.0);
+        createEntry(alpha, "2025-04", 900.0);
+        createEntry(alpha, "2025-05", 850.0);
+
+        achievementService.evaluateAchievements("2025-04");
+
+        assertTrue(Achievement.findByTeam(alpha).stream()
+                        .noneMatch(a -> a.type == AchievementType.CONSECUTIVE_CHAMPION),
+                "Reductions after the evaluated period should not count");
     }
 
     // -------------------------------------------------------------------------

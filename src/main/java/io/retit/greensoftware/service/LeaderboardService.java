@@ -245,7 +245,7 @@ public class LeaderboardService {
         dto.title = a.title;
         dto.description = a.description;
         dto.badgeIcon = a.badgeIcon;
-        dto.earnedAt = a.earnedAt;
+        dto.period = a.period;
         dto.type = a.type != null ? a.type.name() : null;
         return dto;
     }

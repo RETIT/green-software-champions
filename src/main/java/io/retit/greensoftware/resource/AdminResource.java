@@ -5,7 +5,6 @@ import io.retit.greensoftware.entity.Achievement;
 import io.retit.greensoftware.entity.Team;
 import io.retit.greensoftware.service.AchievementService;
 import io.retit.greensoftware.service.CarbonDataService;
-import io.retit.greensoftware.util.Periods;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -14,6 +13,8 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
+
+import java.util.List;
 
 /**
  * Admin-only REST resource for triggering data synchronisation and managing achievements.
@@ -33,18 +34,19 @@ public class AdminResource {
     AchievementService achievementService;
 
     /**
-     * Triggers an immediate carbon data sync for the previous month, the same as the
+     * Triggers an immediate carbon data sync for the recent months, the same as the
      * scheduled sync does.
      */
     @POST
     @Path("/sync")
     @Operation(summary = "Trigger carbon data sync",
-               description = "Fetches the previous month's carbon data from all enabled cloud providers.")
+               description = "Fetches the carbon data of the last carbon.sync.months months, ending at the "
+                       + "previous month, from all enabled cloud providers.")
     public Response triggerSync() {
-        String period = Periods.previous();
-        carbonDataService.syncForPeriod(period);
+        List<String> periods = carbonDataService.syncRecentPeriods();
         return Response.accepted()
-                .entity(new SyncResponse("Sync triggered for period: " + period))
+                .entity(new SyncResponse("Sync triggered for periods: "
+                        + periods.getFirst() + " to " + periods.getLast()))
                 .build();
     }
 
@@ -96,7 +98,7 @@ public class AdminResource {
         dto.title = achievement.title;
         dto.description = achievement.description;
         dto.badgeIcon = achievement.badgeIcon;
-        dto.earnedAt = achievement.earnedAt;
+        dto.period = achievement.period;
         dto.type = achievement.type.name();
         return Response.status(Response.Status.CREATED).entity(dto).build();
     }
