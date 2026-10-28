@@ -25,6 +25,8 @@ public interface CarbonProvider {
      * @param projects Cloud projects to fetch data for (all must belong to this provider).
      * @param period   Reporting period in "YYYY-MM" format.
      * @return List of carbon data records, one per project.
+     * @throws CarbonDataUnavailableException if the data of any project could not be
+     *         fetched or has not been published yet; partial results are never returned.
      */
     List<CarbonData> fetchCarbonData(List<CloudProject> projects, String period);
 

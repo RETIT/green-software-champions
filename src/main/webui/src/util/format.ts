@@ -30,11 +30,28 @@ export function reductionTrend(percent: MaybeNumber): Trend {
   return rounded > 0 ? "positive" : "negative";
 }
 
-const TREND_ARROW: Record<Trend, string> = { positive: "↓ ", negative: "↑ ", neutral: "" };
+const TREND_ARROW: Record<Trend, string> = {
+  positive: "↓ ",
+  negative: "↑ ",
+  neutral: "",
+};
 
 export function formatReductionPercent(percent: MaybeNumber): string {
   if (!isFiniteNumber(percent)) return EMPTY;
   return `${TREND_ARROW[reductionTrend(percent)]}${formatPercent(Math.abs(percent))}`;
+}
+
+/** Formats a YYYY-MM period, e.g. "Mar 26" (short) or "March 2026" (long). */
+export function formatPeriod(
+  period: string,
+  style: "short" | "long" = "short",
+): string {
+  if (!/^\d{4}-\d{2}$/.test(period)) return EMPTY;
+  const [year, month] = period.split("-").map(Number);
+  return new Date(year, month - 1).toLocaleString(undefined, {
+    month: style,
+    year: style === "short" ? "2-digit" : "numeric",
+  });
 }
 
 export function formatPercent(percent: MaybeNumber, digits = 1): string {

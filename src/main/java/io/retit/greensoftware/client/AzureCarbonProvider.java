@@ -2,11 +2,13 @@ package io.retit.greensoftware.client;
 
 import io.retit.greensoftware.config.CloudProvidersConfig;
 import io.retit.greensoftware.entity.CloudProject;
+import io.retit.greensoftware.util.Periods;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.jboss.logging.Logger;
 
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -49,14 +51,11 @@ public class AzureCarbonProvider implements CarbonProvider {
 
         String bearerToken = acquireAccessToken();
         if (bearerToken == null) {
-            LOG.warn("Could not acquire Azure access token; skipping Azure carbon sync.");
-            return List.of();
+            throw new CarbonDataUnavailableException("Could not acquire Azure access token.");
         }
 
         List<CarbonData> results = new ArrayList<>();
-        String[] parts = period.split("-");
-        int year = Integer.parseInt(parts[0]);
-        int month = Integer.parseInt(parts[1]);
+        YearMonth ym = Periods.toYearMonth(period);
 
         for (CloudProject project : projects) {
             try {
@@ -66,12 +65,13 @@ public class AzureCarbonProvider implements CarbonProvider {
                                 "Bearer " + bearerToken,
                                 project.projectId,
                                 "2014-11-01",
-                                year, month);
+                                ym.getYear(), ym.getMonthValue());
                 double co2Kg = extractTotalCo2Kg(response);
                 results.add(new CarbonData(project.projectId, co2Kg));
             } catch (Exception e) {
-                LOG.warnf("Failed to fetch Azure carbon data for project %s: %s",
-                        project.projectId, e.getMessage());
+                throw new CarbonDataUnavailableException(String.format(
+                        "Failed to fetch Azure carbon data for project %s, period %s: %s",
+                        project.projectId, period, e.getMessage()), e);
             }
         }
         return results;
@@ -120,8 +120,10 @@ public class AzureCarbonProvider implements CarbonProvider {
     }
 
     private double extractTotalCo2Kg(AzureCarbonApiClient.CarbonEmissionResponse response) {
-        if (response == null || response.value() == null) {
-            return 0.0;
+        // Providers publish a month's data with a delay of up to a few weeks and
+        // return no rows until then, so no rows must not be mistaken for zero emissions
+        if (response == null || response.value() == null || response.value().isEmpty()) {
+            throw new CarbonDataUnavailableException("No data published yet");
         }
         // Azure returns carbon in metric tons of CO2e; convert to kg
         return response.value().stream()

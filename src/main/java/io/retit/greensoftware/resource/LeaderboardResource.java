@@ -30,7 +30,8 @@ public class LeaderboardResource {
     /**
      * Returns the ranked leaderboard for the specified period.
      *
-     * @param period Optional period in YYYY-MM format. Defaults to the current month.
+     * @param period Optional period in YYYY-MM format. Defaults to the latest period
+     *               every team has data for.
      */
     @GET
     @Operation(summary = "Get the carbon footprint leaderboard",
@@ -42,6 +43,9 @@ public class LeaderboardResource {
 
     /**
      * Returns company-wide carbon summary for the specified period.
+     *
+     * @param period Optional period in YYYY-MM format. Defaults like the leaderboard,
+     *               the resolved period is returned in the response.
      */
     @GET
     @Path("/summary")

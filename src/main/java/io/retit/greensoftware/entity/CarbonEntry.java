@@ -5,7 +5,10 @@ import jakarta.persistence.*;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "carbon_entries",
@@ -26,17 +29,6 @@ public class CarbonEntry extends PanacheEntity {
     @Column(name = "total_co2_kg", columnDefinition = "NUMERIC(20,4)")
     public Double totalCo2Kg;
 
-    /** CO2-equivalent emissions in kg from the previous period. */
-    @Column(name = "previous_co2_kg", columnDefinition = "NUMERIC(20,4)")
-    public Double previousCo2Kg;
-
-    /**
-     * Reduction percentage vs. previous period.
-     * Positive = reduction (good), Negative = increase (bad).
-     */
-    @Column(name = "reduction_percentage", columnDefinition = "NUMERIC(10,4)")
-    public Double reductionPercentage;
-
     @Column(name = "sync_timestamp")
     public Instant syncTimestamp;
 
@@ -55,6 +47,38 @@ public class CarbonEntry extends PanacheEntity {
 
     public static List<CarbonEntry> findByPeriod(String period) {
         return list("period", period);
+    }
+
+    /** The entries of {@code period}, keyed by team id. */
+    public static Map<Long, CarbonEntry> findByPeriodByTeamId(String period) {
+        return findByPeriod(period).stream()
+                .collect(Collectors.toMap(e -> e.team.id, Function.identity()));
+    }
+
+    public static List<CarbonEntry> findByPeriods(List<String> periods) {
+        return list("period in ?1", periods);
+    }
+
+    /**
+     * The periods of {@code periods} that have an entry for every team, latest first.
+     * Entries are unique per team and period and are deleted with their team, so
+     * counting suffices.
+     */
+    public static List<String> findCompletePeriods(List<String> periods) {
+        return getEntityManager()
+                .createQuery("select e.period from CarbonEntry e where e.period in :periods"
+                        + " group by e.period having count(e) >= :teamCount"
+                        + " order by e.period desc", String.class)
+                .setParameter("periods", periods)
+                .setParameter("teamCount", Team.count())
+                .getResultList();
+    }
+
+    /** The earliest period any team has an entry for, if there are any entries. */
+    public static Optional<String> findEarliestPeriod() {
+        return Optional.ofNullable(getEntityManager()
+                .createQuery("select min(e.period) from CarbonEntry e", String.class)
+                .getSingleResult());
     }
 
     public static List<CarbonEntry> findByTeamOrderByPeriodDesc(Team team) {

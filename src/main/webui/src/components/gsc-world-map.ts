@@ -7,6 +7,7 @@ import type { LeaderboardEntry } from "../types.ts";
 import {
   formatCo2,
   formatPercent,
+  formatPeriod,
   formatReductionPercent,
   reductionTrend,
 } from "../util/format.ts";
@@ -116,7 +117,7 @@ export class GscWorldMap extends LitElement {
     return html`
       <div class="section-header">
         <div class="section-title">🗺️ Carbon Footprint World Map</div>
-        <div class="section-meta">${this.period}</div>
+        <div class="section-meta">${formatPeriod(this.period, "long")}</div>
       </div>
 
       <div class="map-container" @mouseleave="${this._hideTooltip}">

@@ -43,8 +43,8 @@ class AchievementServiceTest {
         assertNotNull(alpha);
         assertNotNull(beta);
 
-        createEntry(alpha, "2024-10", 500.0, null, null);
-        createEntry(beta, "2024-10", 2000.0, null, null);
+        createEntry(alpha, "2024-10", 500.0);
+        createEntry(beta, "2024-10", 2000.0);
 
         achievementService.evaluateAchievements("2024-10");
 
@@ -61,7 +61,8 @@ class AchievementServiceTest {
         assertNotNull(alpha);
 
         // 25% reduction
-        createEntry(alpha, "2024-11", 750.0, 1000.0, 25.0);
+        createEntry(alpha, "2024-10", 1000.0);
+        createEntry(alpha, "2024-11", 750.0);
 
         achievementService.evaluateAchievements("2024-11");
 
@@ -73,11 +74,48 @@ class AchievementServiceTest {
 
     @Test
     @Transactional
+    void evaluateAchievements_grantsConsecutiveChampionForThreeMonthsOfReduction() {
+        Team alpha = Team.findByName(TEAM_ALPHA);
+        assertNotNull(alpha);
+
+        createEntry(alpha, "2025-02", 1000.0);
+        createEntry(alpha, "2025-03", 950.0);
+        createEntry(alpha, "2025-04", 900.0);
+        createEntry(alpha, "2025-05", 850.0);
+
+        achievementService.evaluateAchievements("2025-05");
+
+        assertTrue(Achievement.findByTeam(alpha).stream()
+                        .anyMatch(a -> a.type == AchievementType.CONSECUTIVE_CHAMPION),
+                TEAM_ALPHA + " (3 consecutive reductions) should receive CONSECUTIVE_CHAMPION");
+    }
+
+    @Test
+    @Transactional
+    void evaluateAchievements_gapInHistoryEndsStreak() {
+        Team alpha = Team.findByName(TEAM_ALPHA);
+        assertNotNull(alpha);
+
+        // 2025-03 is missing, so only the reduction in 2025-05 counts
+        createEntry(alpha, "2025-01", 1000.0);
+        createEntry(alpha, "2025-02", 950.0);
+        createEntry(alpha, "2025-04", 900.0);
+        createEntry(alpha, "2025-05", 850.0);
+
+        achievementService.evaluateAchievements("2025-05");
+
+        assertTrue(Achievement.findByTeam(alpha).stream()
+                        .noneMatch(a -> a.type == AchievementType.CONSECUTIVE_CHAMPION),
+                "Reductions across a gap should not count as consecutive");
+    }
+
+    @Test
+    @Transactional
     void evaluateAchievements_grantsFirstNetZeroForZeroEmissions() {
         Team alpha = Team.findByName(TEAM_ALPHA);
         assertNotNull(alpha);
 
-        createEntry(alpha, "2024-12", 0.0, 500.0, 100.0);
+        createEntry(alpha, "2024-12", 0.0);
 
         achievementService.evaluateAchievements("2024-12");
 
@@ -93,7 +131,7 @@ class AchievementServiceTest {
         Team alpha = Team.findByName(TEAM_ALPHA);
         assertNotNull(alpha);
 
-        createEntry(alpha, "2025-01", 500.0, null, null);
+        createEntry(alpha, "2025-01", 500.0);
         achievementService.evaluateAchievements("2025-01");
 
         // Evaluate again for same period
@@ -123,14 +161,11 @@ class AchievementServiceTest {
     // Helpers
     // -------------------------------------------------------------------------
 
-    private void createEntry(Team team, String period, Double totalCo2,
-                              Double prevCo2, Double reductionPct) {
+    private void createEntry(Team team, String period, Double totalCo2) {
         CarbonEntry entry = new CarbonEntry();
         entry.team = team;
         entry.period = period;
         entry.totalCo2Kg = totalCo2;
-        entry.previousCo2Kg = prevCo2;
-        entry.reductionPercentage = reductionPct;
         entry.syncTimestamp = Instant.now();
         entry.persist();
     }

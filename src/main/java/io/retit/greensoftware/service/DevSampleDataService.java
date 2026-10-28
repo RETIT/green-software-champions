@@ -1,18 +1,21 @@
 package io.retit.greensoftware.service;
 
+import io.retit.greensoftware.config.CarbonHistoryConfig;
 import io.retit.greensoftware.entity.Achievement;
 import io.retit.greensoftware.entity.AchievementType;
 import io.retit.greensoftware.entity.CarbonEntry;
 import io.retit.greensoftware.entity.Team;
+import io.retit.greensoftware.util.Periods;
 import io.quarkus.arc.profile.IfBuildProfile;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
 
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Stream;
 
 /**
  * Inserts realistic sample carbon data in dev mode so the UI is immediately useful
@@ -26,7 +29,9 @@ import java.util.List;
 public class DevSampleDataService {
 
     private static final Logger LOG = Logger.getLogger(DevSampleDataService.class);
-    private static final DateTimeFormatter PERIOD_FMT = DateTimeFormatter.ofPattern("yyyy-MM");
+
+    @Inject
+    CarbonHistoryConfig historyConfig;
 
     /**
      * Seeds sample carbon entries and achievements for all configured teams.
@@ -35,76 +40,67 @@ public class DevSampleDataService {
      */
     @Transactional
     public void seedSampleData() {
-        String current  = LocalDate.now().format(PERIOD_FMT);
-        String previous = LocalDate.now().minusMonths(1).format(PERIOD_FMT);
+        // The history window the charts show, plus one period more so the
+        // oldest charted period still has a previous period to compare against.
+        List<String> periods = Periods.window(Periods.previous(), historyConfig.months() + 1);
 
         // -----------------------------------------------------------------------
-        // Carbon entries per team
-        // Fields: teamName | currentTotal | awsCurr | azureCurr | gcpCurr
-        //                   | prevTotal   | awsPrev  | azurePrev | gcpPrev
+        // Carbon entries per team, given as the latest-period values per provider.
+        // Older periods are derived from them: monthlyReduction is the average
+        // relative reduction per month (negative = growing footprint), wiggle the
+        // frequency of the month-to-month noise on top of it.
         // null = provider not used by that team
         // -----------------------------------------------------------------------
-        List<SampleEntry> entries = List.of(
-            new SampleEntry("Team Alpha",
-                /*current*/ 245.5, 180.2, null,  65.3,
-                /*prev*/    312.3, 237.8, null,  74.5),
-            new SampleEntry("Team Beta",
-                /*current*/ 189.2,  98.4, 90.8,  null,
-                /*prev*/    167.8,  82.1, 85.7,  null),
-            new SampleEntry("Team Gamma",
-                /*current*/ 128.4,  null, 42.1,  86.3,
-                /*prev*/    189.1,  null, 61.4, 127.7),
-            new SampleEntry("Team Delta",
-                /*current*/ 412.7, 201.3, 112.8,  98.6,
-                /*prev*/    445.2, 220.5, 118.4, 106.3)
+        List<SampleTeam> teams = List.of(
+            //             teamName      aws    azure  gcp    monthlyReduction  wiggle
+            new SampleTeam("Team Alpha", 180.2, null,  65.3,  0.025,            1.1),
+            new SampleTeam("Team Beta",   98.4, 90.8,  null, -0.012,            1.7),
+            new SampleTeam("Team Gamma",  null, 42.1,  86.3,  0.045,            2.3),
+            new SampleTeam("Team Delta", 201.3, 112.8, 98.6,  0.008,            0.9)
         );
 
         int inserted = 0;
-        for (SampleEntry s : entries) {
+        for (SampleTeam s : teams) {
             Team team = Team.findByName(s.teamName);
             if (team == null) {
                 LOG.warnf("Dev sample data: team '%s' not found – run TeamSetupService first.", s.teamName);
                 continue;
             }
 
-            // Previous-period entry (no reduction figure – this IS the baseline)
-            if (CarbonEntry.findByTeamAndPeriod(team, previous).isEmpty()) {
-                CarbonEntry prev = new CarbonEntry();
-                prev.team           = team;
-                prev.period         = previous;
-                prev.totalCo2Kg     = s.prevTotal;
-                prev.awsCo2Kg       = s.awsPrev;
-                prev.azureCo2Kg     = s.azurePrev;
-                prev.gcpCo2Kg       = s.gcpPrev;
-                prev.syncTimestamp  = Instant.now();
-                prev.persist();
-                inserted++;
-            }
+            for (int i = 0; i < periods.size(); i++) {
+                int monthsAgo = periods.size() - 1 - i;
+                double factor = Math.pow(1 + s.monthlyReduction, monthsAgo)
+                        * (1 + 0.08 * Math.sin(monthsAgo * s.wiggle));
 
-            // Current-period entry (includes comparison to previous)
-            if (CarbonEntry.findByTeamAndPeriod(team, current).isEmpty()) {
-                double reduction = s.prevTotal > 0
-                        ? ((s.prevTotal - s.currentTotal) / s.prevTotal) * 100.0
-                        : 0.0;
+                Double aws   = scale(s.awsLatest, factor);
+                Double azure = scale(s.azureLatest, factor);
+                Double gcp   = scale(s.gcpLatest, factor);
+                double total = Stream.of(aws, azure, gcp).filter(Objects::nonNull)
+                        .mapToDouble(Double::doubleValue).sum();
 
-                CarbonEntry curr = new CarbonEntry();
-                curr.team                = team;
-                curr.period              = current;
-                curr.totalCo2Kg          = s.currentTotal;
-                curr.previousCo2Kg       = s.prevTotal;
-                curr.reductionPercentage = reduction;
-                curr.awsCo2Kg            = s.awsCurrent;
-                curr.azureCo2Kg          = s.azureCurrent;
-                curr.gcpCo2Kg            = s.gcpCurrent;
-                curr.syncTimestamp       = Instant.now();
-                curr.persist();
-                inserted++;
+                if (CarbonEntry.findByTeamAndPeriod(team, periods.get(i)).isEmpty()) {
+                    CarbonEntry entry = new CarbonEntry();
+                    entry.team          = team;
+                    entry.period        = periods.get(i);
+                    entry.totalCo2Kg    = total;
+                    entry.awsCo2Kg      = aws;
+                    entry.azureCo2Kg    = azure;
+                    entry.gcpCo2Kg      = gcp;
+                    entry.syncTimestamp = Instant.now();
+                    entry.persist();
+                    inserted++;
+                }
             }
         }
 
         seedAchievements();
         LOG.infof("Dev sample data seeding complete – %d carbon entr%s inserted.",
                 inserted, inserted == 1 ? "y" : "ies");
+    }
+
+    /** Scales a provider value by {@code factor}, rounded to one decimal. */
+    private static Double scale(Double value, double factor) {
+        return value == null ? null : Math.round(value * factor * 10) / 10.0;
     }
 
     // -------------------------------------------------------------------------
@@ -148,12 +144,12 @@ public class DevSampleDataService {
     // Internal data holder
     // -------------------------------------------------------------------------
 
-    private record SampleEntry(
+    private record SampleTeam(
             String teamName,
-            // current period
-            double currentTotal, Double awsCurrent, Double azureCurrent, Double gcpCurrent,
-            // previous period
-            double prevTotal,    Double awsPrev,    Double azurePrev,    Double gcpPrev
+            // latest period
+            Double awsLatest, Double azureLatest, Double gcpLatest,
+            // derivation of older periods
+            double monthlyReduction, double wiggle
     ) {}
 }
 

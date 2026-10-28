@@ -29,5 +29,8 @@ public class LeaderboardEntryDto {
 
     public List<AchievementDto> achievements;
 
+    /** This team's emissions for the periods up to and including {@link #period}, oldest first. */
+    public List<CarbonHistoryPointDto> history;
+
     public String period;
 }

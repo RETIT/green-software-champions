@@ -3,14 +3,21 @@ import { LitElement, css, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { classMap } from "lit/directives/class-map.js";
 import { live } from "lit/directives/live.js";
-import type { LeaderboardEntry, LeaderboardSummary } from "../types.ts";
+import type {
+  HistoryPoint,
+  LeaderboardEntry,
+  LeaderboardSummary,
+} from "../types.ts";
 import {
   formatCo2,
+  formatPeriod,
   formatReductionPercent,
   reductionTrend,
   type Trend,
 } from "../util/format.ts";
+import { periodWindow, shiftPeriod } from "../util/period.ts";
 import "./gsc-leaderboard.ts";
+import "./gsc-sparkline.ts";
 import "./gsc-world-map.ts";
 
 type View = "leaderboard" | "map";
@@ -21,6 +28,9 @@ interface LeaderboardData {
   /** Set when the API failed and demo data is shown instead. */
   error: string | null;
 }
+
+/** Length of the demo data history, matching the backend default. */
+const HISTORY_MONTHS = 13;
 
 const TREND_ICON: Record<Trend, string> = {
   positive: "📉",
@@ -33,7 +43,11 @@ const TREND_ICON: Record<Trend, string> = {
  */
 @customElement("gsc-app")
 export class GscApp extends LitElement {
-  @property({ type: String }) period = this._currentPeriod();
+  /**
+   * The selected period. Empty until the user picks one, which lets the backend
+   * choose the latest period every team has data for.
+   */
+  @property({ type: String }) period = "";
   @state() private _activeView: View = "leaderboard";
 
   /**
@@ -42,11 +56,11 @@ export class GscApp extends LitElement {
    */
   private _dataTask = new Task(this, {
     task: async ([period], { signal }): Promise<LeaderboardData> => {
-      const query = `period=${encodeURIComponent(period)}`;
+      const query = period ? `?period=${encodeURIComponent(period)}` : "";
       try {
         const [lbRes, sumRes] = await Promise.all([
-          fetch(`/api/leaderboard?${query}`, { signal }),
-          fetch(`/api/leaderboard/summary?${query}`, { signal }),
+          fetch(`/api/leaderboard${query}`, { signal }),
+          fetch(`/api/leaderboard/summary${query}`, { signal }),
         ]);
         if (!lbRes.ok)
           throw new Error(`Leaderboard fetch failed: ${lbRes.status}`);
@@ -60,7 +74,7 @@ export class GscApp extends LitElement {
       } catch (err) {
         signal.throwIfAborted();
         return {
-          ...this._demoData(period),
+          ...this._demoData(period || this._fallbackPeriod()),
           error:
             (err instanceof Error && err.message) ||
             "Failed to load leaderboard data.",
@@ -70,9 +84,19 @@ export class GscApp extends LitElement {
     args: () => [this.period] as const,
   });
 
-  private _currentPeriod(): string {
+  /** The period shown: the selected one, or else the one the backend chose. */
+  private get _shownPeriod(): string {
+    return this.period || this._dataTask.value?.summary.period || "";
+  }
+
+  /**
+   * The previous month, the latest one the scheduled sync can fetch. Used for
+   * the demo data when the backend could not choose a period.
+   */
+  private _fallbackPeriod(): string {
     const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const current = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    return shiftPeriod(current, -1);
   }
 
   private _demoData(
@@ -85,55 +109,77 @@ export class GscApp extends LitElement {
       { name: "Team Delta", color: "#8b5cf6", icon: "🚀" },
     ];
     const baseCo2 = [1240, 2890, 3450, 980];
+    // One period more than charted, so the oldest charted one has a predecessor
+    const periods = periodWindow(period, HISTORY_MONTHS + 1);
     const earnedAt = new Date().toISOString();
     const ranked = teams
-      .map((t, i): LeaderboardEntry => ({
-        teamId: i + 1,
-        teamName: t.name,
-        teamColor: t.color,
-        teamIcon: t.icon,
-        rank: 0,
-        period,
-        totalCo2Kg: baseCo2[i],
-        previousCo2Kg: baseCo2[i] * (1 + (Math.random() * 0.3 - 0.1)),
-        reductionPercent: Math.random() * 30 - 5,
-        awsCo2Kg: baseCo2[i] * 0.4,
-        azureCo2Kg: baseCo2[i] * 0.35,
-        gcpCo2Kg: baseCo2[i] * 0.25,
-        companySharePercent: 0,
-        achievements:
-          i === 0
-            ? [
-                {
-                  id: 1,
-                  title: "Carbon Neutral Pioneer",
-                  description: null,
-                  badgeIcon: "🌍",
-                  earnedAt,
-                  type: "FIRST_NET_ZERO",
-                },
-                {
-                  id: 2,
-                  title: "Reduction Champion",
-                  description: null,
-                  badgeIcon: "🏆",
-                  earnedAt,
-                  type: "HIGHEST_REDUCTION",
-                },
-              ]
-            : i === 3
+      .map((t, i): LeaderboardEntry => {
+        // Random walk back from the current period: a random average monthly
+        // reduction (negative = growing) plus random month-to-month noise
+        const monthlyReduction = Math.random() * 0.06 - 0.02;
+        const totals = [baseCo2[i] * (0.9 + Math.random() * 0.2)];
+        for (let p = 1; p < periods.length; p++) {
+          const noise = Math.random() * 0.16 - 0.08;
+          totals.unshift(totals[0] * (1 + monthlyReduction + noise));
+        }
+        const history = periods.slice(1).map((p, j): HistoryPoint => ({
+          period: p,
+          totalCo2Kg: totals[j + 1],
+          awsCo2Kg: totals[j + 1] * 0.4,
+          azureCo2Kg: totals[j + 1] * 0.35,
+          gcpCo2Kg: totals[j + 1] * 0.25,
+        }));
+        const current = totals[totals.length - 1];
+        const previous = totals[totals.length - 2];
+        return {
+          teamId: i + 1,
+          teamName: t.name,
+          teamColor: t.color,
+          teamIcon: t.icon,
+          rank: 0,
+          period,
+          totalCo2Kg: current,
+          previousCo2Kg: previous,
+          reductionPercent: ((previous - current) / previous) * 100,
+          awsCo2Kg: current * 0.4,
+          azureCo2Kg: current * 0.35,
+          gcpCo2Kg: current * 0.25,
+          companySharePercent: 0,
+          history,
+          achievements:
+            i === 0
               ? [
                   {
-                    id: 3,
-                    title: "Leaderboard Leader",
+                    id: 1,
+                    title: "Carbon Neutral Pioneer",
                     description: null,
-                    badgeIcon: "🥇",
+                    badgeIcon: "🌍",
                     earnedAt,
-                    type: "LEADERBOARD_LEADER",
+                    type: "FIRST_NET_ZERO",
+                  },
+                  {
+                    id: 2,
+                    title: "Reduction Champion",
+                    description: null,
+                    badgeIcon: "🏆",
+                    earnedAt,
+                    type: "HIGHEST_REDUCTION",
                   },
                 ]
-              : [],
-      }))
+              : i === 3
+                ? [
+                    {
+                      id: 3,
+                      title: "Leaderboard Leader",
+                      description: null,
+                      badgeIcon: "🥇",
+                      earnedAt,
+                      type: "LEADERBOARD_LEADER",
+                    },
+                  ]
+                : [],
+        };
+      })
       .sort(
         (a, b) =>
           (a.totalCo2Kg ?? Number.MAX_VALUE) -
@@ -158,6 +204,17 @@ export class GscApp extends LitElement {
         reductionPercent:
           prevTotal > 0 ? ((prevTotal - total) / prevTotal) * 100 : null,
         teamCount: teams.length,
+        history: ranked[0].history.map((point, j) => {
+          const sum = (key: keyof Omit<HistoryPoint, "period">) =>
+            ranked.reduce((acc, t) => acc + (t.history[j][key] ?? 0), 0);
+          return {
+            period: point.period,
+            totalCo2Kg: sum("totalCo2Kg"),
+            awsCo2Kg: sum("awsCo2Kg"),
+            azureCo2Kg: sum("azureCo2Kg"),
+            gcpCo2Kg: sum("gcpCo2Kg"),
+          };
+        }),
       },
     };
   }
@@ -176,6 +233,9 @@ export class GscApp extends LitElement {
 
   private _renderContent({ leaderboard, summary: s, error }: LeaderboardData) {
     const trend = reductionTrend(s.reductionPercent);
+    const history = s.history || [];
+    // Matches when the sparkline draws a line, see gsc-sparkline
+    const hasTrend = history.filter((p) => p.totalCo2Kg !== null).length >= 2;
 
     return html`
       ${
@@ -193,7 +253,29 @@ export class GscApp extends LitElement {
           <div class="summary-card-icon">🌫️</div>
           <div class="summary-card-body">
             <div class="value">${formatCo2(s.totalCo2Kg)}</div>
-            <div class="label">Total Company CO₂e</div>
+            <div class="label">
+              Company CO₂e in ${formatPeriod(s.period, "long")}
+            </div>
+          </div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-card-icon">📊</div>
+          <div class="summary-card-body">
+            ${
+              hasTrend
+                ? html`<gsc-sparkline
+                    class="trend"
+                    .points="${history.map((p) => ({
+                      label: formatPeriod(p.period, "long"),
+                      value: p.totalCo2Kg,
+                    }))}"
+                    label="Company CO₂e over the last ${history.length} months"
+                  ></gsc-sparkline>`
+                : html`<div class="value">—</div>`
+            }
+            <div class="label">
+              ${hasTrend ? `${history.length}-Month Trend` : "Trend"}
+            </div>
           </div>
         </div>
         <div class="summary-card">
@@ -202,35 +284,20 @@ export class GscApp extends LitElement {
             <div class="value ${trend}">
               ${formatReductionPercent(s.reductionPercent)}
             </div>
-            <div class="label">vs. Previous Period</div>
-          </div>
-        </div>
-        <div class="summary-card">
-          <div class="summary-card-icon">👥</div>
-          <div class="summary-card-body">
-            <div class="value">${s.teamCount}</div>
-            <div class="label">Teams Competing</div>
-          </div>
-        </div>
-        <div class="summary-card">
-          <div class="summary-card-icon">📅</div>
-          <div class="summary-card-body">
-            <div class="value period">${this.period}</div>
-            <div class="label">Current Period</div>
+            <div class="label">
+              vs. ${formatPeriod(shiftPeriod(s.period, -1), "long")}
+            </div>
           </div>
         </div>
       </div>
       ${
         this._activeView === "leaderboard"
           ? html`
-              <gsc-leaderboard
-                .entries="${leaderboard}"
-                .period="${this.period}"
-              >
+              <gsc-leaderboard .entries="${leaderboard}" .period="${s.period}">
               </gsc-leaderboard>
             `
           : html`
-              <gsc-world-map .entries="${leaderboard}" .period="${this.period}">
+              <gsc-world-map .entries="${leaderboard}" .period="${s.period}">
               </gsc-world-map>
             `
       }
@@ -303,7 +370,7 @@ export class GscApp extends LitElement {
           <input
             type="month"
             id="period"
-            .value="${live(this.period)}"
+            .value="${live(this._shownPeriod)}"
             @change="${this._onPeriodChange}"
           />
         </div>
@@ -571,8 +638,11 @@ export class GscApp extends LitElement {
       letter-spacing: -0.01em;
     }
 
-    .summary-card .value.period {
-      font-size: 1.1em;
+    .summary-card .trend {
+      width: 100%;
+      height: 2.5em;
+      --sparkline-color: var(--retit-text-light);
+      --sparkline-marker-color: var(--retit-green);
     }
 
     .summary-card .value.positive {

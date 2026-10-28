@@ -6,10 +6,13 @@ import type { LeaderboardEntry } from "../types.ts";
 import {
   formatCo2,
   formatPercent,
+  formatPeriod,
   formatReductionPercent,
   reductionTrend,
 } from "../util/format.ts";
 import "./gsc-achievement-badge.ts";
+import "./gsc-history-chart.ts";
+import "./gsc-sparkline.ts";
 
 @customElement("gsc-team-card")
 export class GscTeamCard extends LitElement {
@@ -22,6 +25,7 @@ export class GscTeamCard extends LitElement {
 
     const achievements = e.achievements || [];
     const hiddenAchievements = achievements.slice(3);
+    const history = e.history || [];
 
     return html`
       <div
@@ -63,6 +67,15 @@ export class GscTeamCard extends LitElement {
                 : nothing
             }
           </div>
+
+          <gsc-sparkline
+            class="trend"
+            .points="${history.map((p) => ({
+              label: formatPeriod(p.period, "long"),
+              value: p.totalCo2Kg,
+            }))}"
+            label="${e.teamName} CO₂e over the last ${history.length} months"
+          ></gsc-sparkline>
 
           <div class="metrics">
             <div class="metric">
@@ -126,6 +139,26 @@ export class GscTeamCard extends LitElement {
                     </div>
                   </div>
 
+                  ${
+                    history.some((p) => p.totalCo2Kg !== null)
+                      ? html`
+                          <div>
+                            <div class="expand-label">
+                              ${
+                                history.length === 1
+                                  ? formatPeriod(history[0].period, "long")
+                                  : `Last ${history.length} Months`
+                              }
+                            </div>
+                            <!-- Legend clicks toggle providers, not the card -->
+                            <gsc-history-chart
+                              .history="${history}"
+                              @click="${(ev: Event) => ev.stopPropagation()}"
+                            ></gsc-history-chart>
+                          </div>
+                        `
+                      : nothing
+                  }
                   ${
                     e.achievements && e.achievements.length > 0
                       ? html`
@@ -329,6 +362,12 @@ export class GscTeamCard extends LitElement {
       color: var(--retit-text-light);
     }
 
+    /* Trend sparkline */
+    .trend {
+      flex-shrink: 0;
+      --sparkline-color: var(--team-color);
+    }
+
     /* Achievements */
     .achievements {
       display: flex;
@@ -368,6 +407,7 @@ export class GscTeamCard extends LitElement {
       padding-top: 1em;
       border-top: 1px solid var(--retit-border);
       display: grid;
+      grid-template-columns: minmax(0, 1fr);
       gap: 1em;
     }
 

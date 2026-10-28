@@ -2,11 +2,13 @@ package io.retit.greensoftware.client;
 
 import io.retit.greensoftware.config.CloudProvidersConfig;
 import io.retit.greensoftware.entity.CloudProject;
+import io.retit.greensoftware.util.Periods;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.jboss.logging.Logger;
 
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 import java.io.ByteArrayInputStream;
@@ -57,17 +59,14 @@ public class GcpCarbonProvider implements CarbonProvider {
 
         String accessToken = acquireAccessToken();
         if (accessToken == null) {
-            LOG.warn("Could not acquire GCP access token; skipping GCP carbon sync.");
-            return List.of();
+            throw new CarbonDataUnavailableException("Could not acquire GCP access token.");
         }
 
         List<CarbonData> results = new ArrayList<>();
-        String[] parts = period.split("-");
         // GCP Carbon Footprint API uses YYYY-MM-DD ranges
-        String startDate = period + "-01";
-        java.time.YearMonth ym = java.time.YearMonth.of(
-                Integer.parseInt(parts[0]), Integer.parseInt(parts[1]));
-        String endDate = period + "-" + ym.lengthOfMonth();
+        YearMonth ym = Periods.toYearMonth(period);
+        String startDate = ym.atDay(1).toString();
+        String endDate = ym.atEndOfMonth().toString();
 
         for (CloudProject project : projects) {
             try {
@@ -82,8 +81,9 @@ public class GcpCarbonProvider implements CarbonProvider {
                 double co2Kg = extractTotalCo2Kg(response);
                 results.add(new CarbonData(project.projectId, co2Kg));
             } catch (Exception e) {
-                LOG.warnf("Failed to fetch GCP carbon data for project %s: %s",
-                        project.projectId, e.getMessage());
+                throw new CarbonDataUnavailableException(String.format(
+                        "Failed to fetch GCP carbon data for project %s, period %s: %s",
+                        project.projectId, period, e.getMessage()), e);
             }
         }
         return results;
@@ -150,8 +150,10 @@ public class GcpCarbonProvider implements CarbonProvider {
     }
 
     private double extractTotalCo2Kg(GcpCarbonApiClient.CarbonFootprintResponse response) {
-        if (response == null || response.carbonFootprintSummary() == null) {
-            return 0.0;
+        // Providers publish a month's data with a delay of up to a few weeks and
+        // return no rows until then, so no rows must not be mistaken for zero emissions
+        if (response == null || response.carbonFootprintSummary() == null || response.carbonFootprintSummary().isEmpty()) {
+            throw new CarbonDataUnavailableException("No data published yet");
         }
         // GCP API returns kg of CO2e directly
         return response.carbonFootprintSummary().stream()

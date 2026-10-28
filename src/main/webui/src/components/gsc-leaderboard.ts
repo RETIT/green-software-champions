@@ -2,6 +2,7 @@ import { LitElement, css, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
 import type { LeaderboardEntry } from "../types.ts";
+import { formatPeriod } from "../util/format.ts";
 import "./gsc-team-card.ts";
 
 /**
@@ -20,7 +21,7 @@ export class GscLeaderboard extends LitElement {
           <div class="empty-icon">📊</div>
           <p>
             No leaderboard data available for
-            <strong>${this.period}</strong>.<br />
+            <strong>${formatPeriod(this.period, "long")}</strong>.<br />
             Run a carbon data sync to populate the leaderboard.
           </p>
         </div>
@@ -30,7 +31,10 @@ export class GscLeaderboard extends LitElement {
     return html`
       <div class="section-header">
         <div class="section-title">🏆 Carbon Footprint Leaderboard</div>
-        <div class="section-meta">${this.period}</div>
+        <div class="section-meta">
+          ${this.entries.length} ${this.entries.length === 1 ? "team" : "teams"}
+          · ${formatPeriod(this.period, "long")}
+        </div>
       </div>
 
       <div class="legend">
@@ -82,6 +86,8 @@ export class GscLeaderboard extends LitElement {
 
     .leaderboard-grid {
       display: grid;
+      /* minmax(0, …) so card content can never widen the column */
+      grid-template-columns: minmax(0, 1fr);
       gap: 0.75em;
     }
 

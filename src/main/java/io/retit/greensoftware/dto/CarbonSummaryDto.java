@@ -1,5 +1,7 @@
 package io.retit.greensoftware.dto;
 
+import java.util.List;
+
 /**
  * Aggregated carbon summary for the entire company in a given period.
  */
@@ -17,4 +19,7 @@ public class CarbonSummaryDto {
     public Double reductionPercent;
 
     public int teamCount;
+
+    /** Company-wide emissions for the periods up to and including {@link #period}, oldest first. */
+    public List<CarbonHistoryPointDto> history;
 }

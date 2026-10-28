@@ -59,6 +59,7 @@ quarkus:
     # Development mode: proxy API requests to this Quarkus backend
     dev-server:
       port: 5173
+    ignored-path-prefixes: /api
 
   # ---------------------------------------------------------------------------
   # HTTP
@@ -89,7 +90,7 @@ quarkus:
   log:
     level: INFO
     category:
-      "com.retit.greensoftware":
+      "io.retit.greensoftware":
         level: DEBUG
 
 # =============================================================================
@@ -113,13 +114,20 @@ cloud:
     endpoint: ${GCP_ENDPOINT:https://cloudbilling.googleapis.com}
 
 # =============================================================================
-# Carbon Sync Schedule
-# Default: 1st of every month at 02:00 UTC
+# Carbon Sync Schedule & History
+# Default: 25th of every month at 02:00 UTC, as the providers publish a
+# month's data only by about the 21st (GCP), 19th (Azure) and 21st (AWS) of
+# the following month.
 # Override via carbon.sync.cron environment variable or application.yaml.
+# Each sync fetches the previous month. The history charts show up to
+# carbon.history.months months (13, so the same month of the previous year is
+# included), but none before the earliest synced month.
 # =============================================================================
 carbon:
   sync:
-    cron: "${CARBON_SYNC_CRON:0 0 2 1 * ?}"
+    cron: "${CARBON_SYNC_CRON:0 0 2 25 * ?}"
+  history:
+    months: ${CARBON_HISTORY_MONTHS:13}
 
 # =============================================================================
 # Teams Configuration
