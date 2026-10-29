@@ -10,6 +10,7 @@ import {
   formatReductionPercent,
   reductionTrend,
 } from "../util/format.ts";
+import { daysInPeriod } from "../util/period.ts";
 import "./gsc-achievement-badge.ts";
 import "./gsc-history-chart.ts";
 import "./gsc-sparkline.ts";
@@ -73,6 +74,7 @@ export class GscTeamCard extends LitElement {
             .points="${history.map((p) => ({
               label: formatPeriod(p.period, "long"),
               value: p.totalCo2Kg,
+              days: daysInPeriod(p.period),
             }))}"
             label="${e.teamName} CO₂e over the last ${history.length} months"
           ></gsc-sparkline>

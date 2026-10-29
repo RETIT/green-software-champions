@@ -16,7 +16,10 @@ public class LeaderboardEntryDto {
     /** This team's share of the company's total cloud carbon footprint (0–100). */
     public Double companySharePercent;
 
-    /** CO2 reduction percentage vs. the previous period. Positive = improvement. */
+    /**
+     * CO2 reduction percentage vs. the previous period, based on daily averages so that
+     * months of different length are comparable. Positive = improvement.
+     */
     public Double reductionPercent;
 
     /** CO2 from previous period for reference. */

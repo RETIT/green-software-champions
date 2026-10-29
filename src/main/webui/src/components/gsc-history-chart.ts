@@ -12,6 +12,11 @@ import { LitElement, css, html } from "lit";
 import { customElement, property, query } from "lit/decorators.js";
 import type { HistoryPoint } from "../types.ts";
 import { formatCo2, formatPeriod } from "../util/format.ts";
+import {
+  NORMALIZED_DAYS,
+  daysInPeriod,
+  normalizeToMonth,
+} from "../util/period.ts";
 
 Chart.register(
   BarController,
@@ -166,10 +171,19 @@ export class GscHistoryChart extends LitElement {
                   : "",
               label: (item) =>
                 ` ${item.dataset.label}: ${formatCo2(item.raw as number)}`,
-              footer: ([item]) =>
-                item
-                  ? `Total: ${formatCo2(this.history[item.dataIndex].totalCo2Kg)}`
-                  : "",
+              footer: ([item]) => {
+                if (!item) return "";
+                const { period, totalCo2Kg } = this.history[item.dataIndex];
+                const lines = [`Total: ${formatCo2(totalCo2Kg)}`];
+                const days = daysInPeriod(period);
+                // Equal to the total for months of the normalized length
+                if (totalCo2Kg !== null && days !== NORMALIZED_DAYS) {
+                  lines.push(
+                    `Per ${NORMALIZED_DAYS} days: ${formatCo2(normalizeToMonth(totalCo2Kg, days))}`,
+                  );
+                }
+                return lines;
+              },
             },
           },
         },

@@ -75,6 +75,23 @@ class AchievementServiceTest {
 
     @Test
     @Transactional
+    void evaluateAchievements_bigSaverComparesDailyAverages() {
+        Team alpha = Team.findByName(TEAM_ALPHA);
+        assertNotNull(alpha);
+
+        // 21% less in total, but February has 3 days fewer: only 12.5% less per day
+        createEntry(alpha, "2025-01", 1000.0);
+        createEntry(alpha, "2025-02", 790.0);
+
+        achievementService.evaluateAchievements("2025-02");
+
+        assertTrue(Achievement.findByTeam(alpha).stream()
+                        .noneMatch(a -> a.type == AchievementType.BIG_SAVER),
+                "A reduction due to the shorter month should not count");
+    }
+
+    @Test
+    @Transactional
     void evaluateAchievements_grantsConsecutiveChampionForThreeMonthsOfReduction() {
         Team alpha = Team.findByName(TEAM_ALPHA);
         assertNotNull(alpha);

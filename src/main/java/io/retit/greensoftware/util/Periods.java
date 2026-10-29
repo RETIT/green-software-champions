@@ -41,6 +41,11 @@ public final class Periods {
         return periods;
     }
 
+    /** The number of days in {@code period}. */
+    public static int lengthInDays(String period) {
+        return toYearMonth(period).lengthOfMonth();
+    }
+
     /** Parses {@code period} into a {@link YearMonth}. */
     public static YearMonth toYearMonth(String period) {
         return YearMonth.parse(period);

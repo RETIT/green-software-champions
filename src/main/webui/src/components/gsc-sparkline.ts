@@ -6,11 +6,23 @@ import {
   formatReductionPercent,
   reductionTrend,
 } from "../util/format.ts";
+import { NORMALIZED_DAYS, normalizeToMonth } from "../util/period.ts";
 
 export interface SparklinePoint {
   label: string;
   /** null marks a period without data; it is drawn as a gap. */
   value: number | null;
+  /**
+   * Length of the period in days. The line and the change in the readout use the
+   * value normalized to NORMALIZED_DAYS, so periods of different length are
+   * comparable; the readout shows both values.
+   */
+  days: number;
+}
+
+/** The point's value normalized to NORMALIZED_DAYS, or null if it has no data. */
+function normalized(point: SparklinePoint | undefined): number | null {
+  return point?.value != null ? normalizeToMonth(point.value, point.days) : null;
 }
 
 /** viewBox height; the width is 100, so x coordinates are percentages. */
@@ -70,11 +82,12 @@ export class GscSparkline extends LitElement {
     const segments: [number, number][][] = [];
     let current: [number, number][] = [];
     this.points.forEach((p, i) => {
-      if (p.value === null) {
+      const value = normalized(p);
+      if (value === null) {
         if (current.length) segments.push(current);
         current = [];
       } else {
-        current.push([this._x(i), this._y(p.value, range)]);
+        current.push([this._x(i), this._y(value, range)]);
       }
     });
     if (current.length) segments.push(current);
@@ -83,11 +96,12 @@ export class GscSparkline extends LitElement {
 
   /**
    * Reduction in percent from the point before `index` to the one at `index`
-   * (positive means a drop), or null if either has no data or the previous is 0.
+   * after normalization (positive means a drop), or null if either has no data
+   * or the previous is 0.
    */
   private _reductionFromPrevious(index: number): number | null {
-    const current = this.points[index]?.value ?? null;
-    const previous = this.points[index - 1]?.value ?? null;
+    const current = normalized(this.points[index]);
+    const previous = normalized(this.points[index - 1]);
     if (current === null || previous === null || previous === 0) return null;
     return ((previous - current) / previous) * 100;
   }
@@ -122,7 +136,7 @@ export class GscSparkline extends LitElement {
 
   override render() {
     const values = this.points
-      .map((p) => p.value)
+      .map(normalized)
       .filter((v): v is number => v !== null);
     // A single value is no trend yet; the host keeps its size, so the layout
     // around it doesn't shift once there is one
@@ -138,12 +152,12 @@ export class GscSparkline extends LitElement {
         ? this._reductionFromPrevious(this._hoverIndex)
         : null;
 
-    const dot = (index: number, value: number, cls: string) => html`
+    const dot = (index: number, cls: string) => html`
       <span
         class="dot ${cls}"
         style="${styleMap({
           left: `${this._x(index)}%`,
-          top: `${(this._y(value, range) / HEIGHT) * 100}%`,
+          top: `${(this._y(normalized(this.points[index])!, range) / HEIGHT) * 100}%`,
         })}"
       ></span>
     `;
@@ -179,14 +193,14 @@ export class GscSparkline extends LitElement {
             (this.points[i - 1]?.value ?? null) === null &&
             (this.points[i + 1]?.value ?? null) === null &&
             i !== this.points.length - 1
-              ? dot(i, p.value, "isolated")
+              ? dot(i, "isolated")
               : nothing,
           )
         }
-        ${last.value !== null ? dot(this.points.length - 1, last.value, "current") : nothing}
+        ${last.value !== null ? dot(this.points.length - 1, "current") : nothing}
         ${
           hovered?.value != null && this._hoverIndex !== null
-            ? dot(this._hoverIndex, hovered.value, "hover")
+            ? dot(this._hoverIndex, "hover")
             : nothing
         }
       </div>
@@ -195,6 +209,15 @@ export class GscSparkline extends LitElement {
           hovered
             ? html`<span class="tip-label">${hovered.label}</span>
                 <span class="tip-value">${formatCo2(hovered.value)}</span>
+                ${
+                  // Equal to the value for periods of the normalized length
+                  hovered.value !== null && hovered.days !== NORMALIZED_DAYS
+                    ? html`<span class="tip-normalized">
+                        (${formatCo2(normalized(hovered))} per
+                        ${NORMALIZED_DAYS} days)
+                      </span>`
+                    : nothing
+                }
                 ${
                   change !== null
                     ? html`<span class="tip-change ${reductionTrend(change)}">
@@ -288,6 +311,11 @@ export class GscSparkline extends LitElement {
 
     .tip-value {
       font-weight: 600;
+    }
+
+    .tip-normalized {
+      margin-left: 0.4em;
+      color: var(--retit-text-light);
     }
 
     .tip-change {

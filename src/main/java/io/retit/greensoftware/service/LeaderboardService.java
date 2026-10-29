@@ -127,7 +127,7 @@ public class LeaderboardService {
         dto.period = resolvedPeriod;
         dto.totalCo2Kg = total;
         dto.previousTotalCo2Kg = prevTotal > 0 ? prevTotal : null;
-        dto.reductionPercent = Reductions.percent(dto.previousTotalCo2Kg, total);
+        dto.reductionPercent = Reductions.fromPrevious(resolvedPeriod, dto.previousTotalCo2Kg, total);
         dto.teamCount = (int) Team.count();
 
         List<String> window = historyWindow(resolvedPeriod);

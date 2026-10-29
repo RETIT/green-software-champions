@@ -115,6 +115,45 @@ class LeaderboardServiceTest {
 
     @Test
     @Transactional
+    void getLeaderboard_comparesDailyAveragesOfMonthsWithDifferentLength() {
+        Team alpha = Team.findByName(TEAM_ALPHA);
+        assertNotNull(alpha);
+
+        // 100 kg per day in both the 31-day January and the 28-day February
+        createEntry(alpha, "2025-01", 3100.0);
+        createEntry(alpha, "2025-02", 2800.0);
+
+        var entry = findEntry(leaderboardService.getLeaderboard("2025-02"), TEAM_ALPHA);
+
+        assertEquals(3100.0, entry.previousCo2Kg, 0.01, "The previous total should not be normalized");
+        assertEquals(2800.0, entry.totalCo2Kg, 0.01, "The total should not be normalized");
+        assertEquals(0.0, entry.reductionPercent, 0.01, "Same daily emissions are no reduction");
+    }
+
+    @Test
+    @Transactional
+    void getCompanySummary_comparesDailyAveragesOfMonthsWithDifferentLength() {
+        Team alpha = Team.findByName(TEAM_ALPHA);
+        Team beta = Team.findByName(TEAM_BETA);
+        assertNotNull(alpha);
+        assertNotNull(beta);
+
+        // 2000 kg in the 31-day March, 2100 kg in the 30-day April
+        createEntry(alpha, "2025-03", 1000.0);
+        createEntry(alpha, "2025-04", 1050.0);
+        createEntry(beta, "2025-03", 1000.0);
+        createEntry(beta, "2025-04", 1050.0);
+
+        var summary = leaderboardService.getCompanySummary("2025-04");
+
+        assertEquals(2000.0, summary.previousTotalCo2Kg, 0.01);
+        assertEquals(2100.0, summary.totalCo2Kg, 0.01);
+        assertEquals((2000.0 / 31 - 2100.0 / 30) / (2000.0 / 31) * 100, summary.reductionPercent, 0.01,
+                "The reduction should compare daily averages");
+    }
+
+    @Test
+    @Transactional
     void getLeaderboard_withoutPreviousPeriod_hasNoReduction() {
         Team alpha = Team.findByName(TEAM_ALPHA);
         assertNotNull(alpha);
@@ -137,16 +176,17 @@ class LeaderboardServiceTest {
         assertNotNull(alpha);
         assertNotNull(beta);
 
-        createEntry(alpha, "2024-08", 1000.0);
-        createEntry(alpha, "2024-09", 800.0);
-        createEntry(beta, "2024-08", 1500.0);
-        createEntry(beta, "2024-09", 1200.0);
-        // Not counted, as Gamma has no data for 2024-09
+        // Both months have 31 days
+        createEntry(alpha, "2024-07", 1000.0);
+        createEntry(alpha, "2024-08", 800.0);
+        createEntry(beta, "2024-07", 1500.0);
+        createEntry(beta, "2024-08", 1200.0);
+        // Not counted, as Gamma has no data for 2024-08
         Team gamma = Team.findByName(TEAM_GAMMA);
         assertNotNull(gamma);
-        createEntry(gamma, "2024-08", 5000.0);
+        createEntry(gamma, "2024-07", 5000.0);
 
-        var summary = leaderboardService.getCompanySummary("2024-09");
+        var summary = leaderboardService.getCompanySummary("2024-08");
 
         assertEquals(2500.0, summary.previousTotalCo2Kg, 0.01, "Alpha 1000 + Beta 1500");
         assertEquals(20.0, summary.reductionPercent, 0.01, "2500 → 2000 is a 20% reduction");

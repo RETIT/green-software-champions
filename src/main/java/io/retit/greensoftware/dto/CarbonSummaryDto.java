@@ -15,7 +15,10 @@ public class CarbonSummaryDto {
     /** Total company-wide CO2 in kg from the previous period. */
     public Double previousTotalCo2Kg;
 
-    /** Company-wide reduction percentage vs. previous period. */
+    /**
+     * Company-wide reduction percentage vs. previous period, based on daily averages so
+     * that months of different length are comparable.
+     */
     public Double reductionPercent;
 
     public int teamCount;

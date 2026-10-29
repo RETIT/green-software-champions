@@ -15,7 +15,7 @@ import {
   reductionTrend,
   type Trend,
 } from "../util/format.ts";
-import { periodWindow, shiftPeriod } from "../util/period.ts";
+import { daysInPeriod, periodWindow, shiftPeriod } from "../util/period.ts";
 import "./gsc-leaderboard.ts";
 import "./gsc-sparkline.ts";
 import "./gsc-world-map.ts";
@@ -111,6 +111,14 @@ export class GscApp extends LitElement {
     const baseCo2 = [1240, 2890, 3450, 980];
     // One period more than charted, so the oldest charted one has a predecessor
     const periods = periodWindow(period, HISTORY_MONTHS + 1);
+    const previousPeriod = periods[periods.length - 2];
+    // Like the backend, compare daily averages so months of different length
+    // are comparable
+    const reduction = (previous: number, current: number) => {
+      const previousPerDay = previous / daysInPeriod(previousPeriod);
+      const currentPerDay = current / daysInPeriod(period);
+      return ((previousPerDay - currentPerDay) / previousPerDay) * 100;
+    };
     const ranked = teams
       .map((t, i): LeaderboardEntry => {
         // Random walk back from the current period: a random average monthly
@@ -139,7 +147,7 @@ export class GscApp extends LitElement {
           period,
           totalCo2Kg: current,
           previousCo2Kg: previous,
-          reductionPercent: ((previous - current) / previous) * 100,
+          reductionPercent: reduction(previous, current),
           awsCo2Kg: current * 0.4,
           azureCo2Kg: current * 0.35,
           gcpCo2Kg: current * 0.25,
@@ -200,8 +208,7 @@ export class GscApp extends LitElement {
         period,
         totalCo2Kg: total,
         previousTotalCo2Kg: prevTotal,
-        reductionPercent:
-          prevTotal > 0 ? ((prevTotal - total) / prevTotal) * 100 : null,
+        reductionPercent: prevTotal > 0 ? reduction(prevTotal, total) : null,
         teamCount: teams.length,
         history: ranked[0].history.map((point, j) => {
           const sum = (key: keyof Omit<HistoryPoint, "period">) =>
@@ -267,6 +274,7 @@ export class GscApp extends LitElement {
                     .points="${history.map((p) => ({
                       label: formatPeriod(p.period, "long"),
                       value: p.totalCo2Kg,
+                      days: daysInPeriod(p.period),
                     }))}"
                     label="Company CO₂e over the last ${history.length} months"
                   ></gsc-sparkline>`
