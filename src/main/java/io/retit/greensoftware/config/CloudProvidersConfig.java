@@ -25,13 +25,9 @@ public interface CloudProvidersConfig {
         boolean enabled();
 
         /**
-         * AWS Carbon Footprint API endpoint.
-         * Default: https://sustainability.us-east-1.amazonaws.com
+         * AWS access key ID for authenticating to the Sustainability API. Without it and
+         * {@link #secretKey()}, the AWS SDK's default credentials chain is used.
          */
-        @WithDefault("https://sustainability.us-east-1.amazonaws.com")
-        String endpoint();
-
-        /** AWS access key ID for authenticating to the Carbon Footprint API. */
         @WithName("access-key")
         Optional<String> accessKey();
 
@@ -39,7 +35,7 @@ public interface CloudProvidersConfig {
         @WithName("secret-key")
         Optional<String> secretKey();
 
-        /** AWS region where the sustainability service is queried. */
+        /** AWS region where the sustainability service is queried, also determines the endpoint. */
         @WithDefault("us-east-1")
         String region();
     }

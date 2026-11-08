@@ -16,6 +16,11 @@ import org.jboss.logging.Logger;
  * Each sync also re-fetches the months before it ({@code carbon.sync.months} in
  * total), as the providers may revise already published data.
  *
+ * <p>{@link ApplicationStartup} also runs a sync at every startup and waits for it, so a
+ * new installation does not have to wait for the next scheduled sync. Before the 25th, the
+ * providers may not have published the previous month yet. It then stays incomplete until
+ * a later sync.
+ *
  * <p>The schedule can be overridden in application.yaml via
  * {@code quarkus.scheduler.cron-type} or by providing a custom cron expression
  * for {@code carbon.sync.cron}.
@@ -29,15 +34,15 @@ public class CarbonSyncScheduler {
     CarbonDataService carbonDataService;
 
     /**
-     * Runs on the 25th of each month at 02:00 UTC to sync the carbon footprint data
-     * of the recent months from all configured cloud providers.
+     * Runs on the 25th of each month at 02:00 UTC and at startup to sync the carbon
+     * footprint data of the recent months from all configured cloud providers.
      *
      * <p>The cron expression {@code 0 0 2 25 * ?} means:
      * at 02:00:00 on the 25th day of every month.
      */
     @Scheduled(cron = "${carbon.sync.cron:0 0 2 25 * ?}")
     void syncCarbonData() {
-        LOG.info("Scheduled carbon data sync triggered.");
+        LOG.info("Carbon data sync triggered.");
         try {
             carbonDataService.syncRecentPeriods();
         } catch (Exception e) {

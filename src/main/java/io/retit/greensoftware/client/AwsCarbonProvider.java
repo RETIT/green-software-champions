@@ -5,24 +5,15 @@ import io.retit.greensoftware.entity.CloudProject;
 import io.retit.greensoftware.util.Periods;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.jboss.logging.Logger;
 
-import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
- * AWS Carbon Footprint data provider.
- *
- * <p>Connects to the AWS Sustainability Carbon Footprint API
- * (https://docs.aws.amazon.com/aws-cost-management/latest/APIReference/API_CarbonFootprint.html).
- *
- * <p><b>Authentication:</b> The AWS Carbon Footprint API requires AWS Signature Version 4 (SigV4)
- * authentication. In production, configure {@code cloud.aws.access-key} and
- * {@code cloud.aws.secret-key} (or use IAM roles / instance profiles).
- * The {@link AwsCarbonApiClient} REST client must be augmented with a SigV4 request filter
- * for production use.
+ * AWS carbon data provider, fetching the estimated emissions of AWS accounts through
+ * the {@link AwsCarbonApiClient}. The project IDs are the AWS account IDs.
  */
 @ApplicationScoped
 public class AwsCarbonProvider implements CarbonProvider {
@@ -33,7 +24,6 @@ public class AwsCarbonProvider implements CarbonProvider {
     CloudProvidersConfig config;
 
     @Inject
-    @RestClient
     AwsCarbonApiClient apiClient;
 
     @Override
@@ -48,38 +38,29 @@ public class AwsCarbonProvider implements CarbonProvider {
             return List.of();
         }
 
-        List<CarbonData> results = new ArrayList<>();
-        // Convert the period to start/end timestamps for the AWS API
-        YearMonth ym = Periods.toYearMonth(period);
-        String startTime = ym.atDay(1) + "T00:00:00Z";
-        String endTime = ym.atEndOfMonth() + "T23:59:59Z";
+        List<String> accountIds = projects.stream().map(p -> p.projectId).toList();
+        Map<String, Double> metricTonsByAccount;
+        try {
+            LOG.infof("Fetching AWS carbon data for accounts %s, period %s", accountIds, period);
+            metricTonsByAccount = apiClient.getEstimatedEmissions(accountIds, Periods.toYearMonth(period));
+        } catch (Exception e) {
+            throw new CarbonDataUnavailableException(String.format(
+                    "Failed to fetch AWS carbon data for projects %s, period %s: %s",
+                    accountIds, period, e.getMessage()), e);
+        }
 
-        for (CloudProject project : projects) {
-            try {
-                LOG.infof("Fetching AWS carbon data for project %s, period %s", project.projectId, period);
-                AwsCarbonApiClient.CarbonFootprintResponse response =
-                        apiClient.getCarbonFootprintSummary(project.projectId, startTime, endTime, "METRIC_TON");
-                double co2Kg = extractTotalCo2Kg(response);
-                results.add(new CarbonData(project.projectId, co2Kg));
-            } catch (Exception e) {
+        List<CarbonData> results = new ArrayList<>();
+        for (String accountId : accountIds) {
+            Double metricTons = metricTonsByAccount.get(accountId);
+            // Providers publish a month's data with a delay of up to a few weeks and
+            // return no rows until then, so no rows must not be mistaken for zero emissions
+            if (metricTons == null) {
                 throw new CarbonDataUnavailableException(String.format(
-                        "Failed to fetch AWS carbon data for project %s, period %s: %s",
-                        project.projectId, period, e.getMessage()), e);
+                        "No AWS carbon data published yet for account %s, period %s", accountId, period));
             }
+            // AWS API returns metric tons of CO2-equivalent; convert to kg
+            results.add(new CarbonData(accountId, metricTons * 1000.0));
         }
         return results;
-    }
-
-    private double extractTotalCo2Kg(AwsCarbonApiClient.CarbonFootprintResponse response) {
-        // Providers publish a month's data with a delay of up to a few weeks and
-        // return no rows until then, so no rows must not be mistaken for zero emissions
-        if (response == null || response.carbonFootprintSummary() == null || response.carbonFootprintSummary().isEmpty()) {
-            throw new CarbonDataUnavailableException("No data published yet");
-        }
-        // AWS API returns metric tons of CO2-equivalent; convert to kg
-        double metricTons = response.carbonFootprintSummary().stream()
-                .mapToDouble(s -> s.value() != null ? s.value() : 0.0)
-                .sum();
-        return metricTons * 1000.0;
     }
 }

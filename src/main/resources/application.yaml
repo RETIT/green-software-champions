@@ -74,9 +74,6 @@ quarkus:
   # REST Clients for cloud provider APIs
   # ---------------------------------------------------------------------------
   rest-client:
-    aws-carbon-api:
-      url: ${cloud.aws.endpoint:https://sustainability.us-east-1.amazonaws.com}
-      scope: jakarta.inject.Singleton
     azure-carbon-api:
       url: ${cloud.azure.endpoint:https://management.azure.com}
       scope: jakarta.inject.Singleton
@@ -102,8 +99,9 @@ quarkus:
 cloud:
   aws:
     enabled: ${AWS_ENABLED:false}
-    endpoint: ${AWS_ENDPOINT:https://sustainability.us-east-1.amazonaws.com}
     region: ${AWS_REGION:us-east-1}
+    access-key: ${AWS_ACCESS_KEY_ID:}
+    secret-key: ${AWS_SECRET_ACCESS_KEY:}
 
   azure:
     enabled: ${AZURE_ENABLED:false}
@@ -119,6 +117,7 @@ cloud:
 # month's data only by about the 21st (GCP), 19th (Azure) and 21st (AWS) of
 # the following month.
 # Override via carbon.sync.cron environment variable or application.yaml.
+# A sync also runs at every startup, which waits for it to finish.
 # Each sync fetches the last carbon.sync.months months (12), ending at the
 # previous month, and overwrites the stored older months, as the providers may
 # revise their data. Each month's achievements are evaluated once, as soon as
@@ -260,3 +259,8 @@ teams:
     hibernate-orm:
       log:
         sql: true
+#        bind-parameters: false
+
+    security:
+      auth:
+        enabled-in-dev-mode: false

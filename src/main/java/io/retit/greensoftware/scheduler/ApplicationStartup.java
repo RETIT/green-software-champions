@@ -12,7 +12,7 @@ import org.jboss.logging.Logger;
 
 /**
  * Handles application startup events: initialises teams from configuration
- * and (optionally) triggers an initial carbon data sync.
+ * and runs an initial carbon data sync.
  */
 @ApplicationScoped
 public class ApplicationStartup {
@@ -21,6 +21,9 @@ public class ApplicationStartup {
 
     @Inject
     TeamSetupService teamSetupService;
+
+    @Inject
+    CarbonSyncScheduler carbonSyncScheduler;
 
     /**
      * Injected as {@link Instance} so that the bean is optional:
@@ -38,6 +41,10 @@ public class ApplicationStartup {
         if (!devSampleDataService.isUnsatisfied()) {
             devSampleDataService.get().seedSampleData();
         }
+
+        // Needs the teams to exist. Runs synchronously, so the startup only completes
+        // once the data of the recent months has been fetched from the providers
+        carbonSyncScheduler.syncCarbonData();
 
         LOG.info("Application startup complete.");
     }
