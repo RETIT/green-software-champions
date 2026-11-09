@@ -2,6 +2,7 @@ package io.retit.greensoftware.client;
 
 import io.retit.greensoftware.config.CloudProvidersConfig;
 import io.retit.greensoftware.entity.CloudProject;
+import io.retit.greensoftware.util.PeriodRange;
 import io.retit.greensoftware.util.Periods;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -11,6 +12,7 @@ import org.jboss.logging.Logger;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.nio.charset.StandardCharsets;
@@ -51,10 +53,10 @@ public class GcpCarbonProvider implements CarbonProvider {
     }
 
     @Override
-    public List<CarbonData> fetchCarbonData(List<CloudProject> projects, String period) {
+    public Map<String, List<CarbonData>> fetchCarbonData(List<CloudProject> projects, PeriodRange range) {
         if (!isEnabled()) {
             LOG.debug("GCP carbon provider is disabled; returning empty data.");
-            return List.of();
+            return Map.of();
         }
 
         String accessToken = acquireAccessToken();
@@ -62,6 +64,16 @@ public class GcpCarbonProvider implements CarbonProvider {
             throw new CarbonDataUnavailableException("Could not acquire GCP access token.");
         }
 
+        // One request per project and month
+        return CarbonProvider.fetchEachPeriod(range, period -> fetchPeriod(projects, period, accessToken));
+    }
+
+    /**
+     * Fetches the data of all {@code projects} in {@code period}.
+     *
+     * @throws CarbonDataUnavailableException if the data of any project could not be fetched
+     */
+    private List<CarbonData> fetchPeriod(List<CloudProject> projects, String period, String accessToken) {
         List<CarbonData> results = new ArrayList<>();
         // GCP Carbon Footprint API uses YYYY-MM-DD ranges
         YearMonth ym = Periods.toYearMonth(period);

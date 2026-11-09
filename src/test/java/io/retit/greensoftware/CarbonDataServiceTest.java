@@ -8,8 +8,10 @@ import io.retit.greensoftware.entity.AchievementEvaluation;
 import io.retit.greensoftware.entity.AchievementType;
 import io.retit.greensoftware.entity.CarbonEntry;
 import io.retit.greensoftware.entity.CloudProject;
+import io.retit.greensoftware.entity.CloudProvider;
 import io.retit.greensoftware.entity.Team;
 import io.retit.greensoftware.service.CarbonDataService;
+import io.retit.greensoftware.util.PeriodRange;
 import io.retit.greensoftware.util.Periods;
 import io.quarkus.narayana.jta.QuarkusTransaction;
 import io.quarkus.test.junit.QuarkusMock;
@@ -20,6 +22,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -42,6 +45,7 @@ class CarbonDataServiceTest {
     CarbonSyncConfig syncConfig;
 
     private static final String TEAM_ALPHA = "Team Alpha";
+    private static final String TEAM_BETA = "Team Beta";
     private static final String TEAM_GAMMA = "Team Gamma";
     /** Team Beta's AWS account from application.yaml. */
     private static final String BETA_AWS_PROJECT = "234567890123";
@@ -66,20 +70,49 @@ class CarbonDataServiceTest {
     void syncRecentPeriods_storesTheConfiguredNumberOfMonths() {
         aws.co2KgByPeriod.put(period, 100.0);
 
-        List<String> synced = carbonDataService.syncRecentPeriods();
+        PeriodRange synced = carbonDataService.syncRecentPeriods();
 
-        assertEquals(Periods.window(period, syncConfig.months()), synced);
+        assertEquals(Periods.window(period, syncConfig.months()), synced.periods());
         QuarkusTransaction.requiringNew().run(() -> {
             CarbonEntry entry = CarbonEntry.findByTeamAndPeriod(Team.findByName(TEAM_ALPHA), period).orElseThrow();
             assertEquals(100.0, entry.totalCo2Kg, 0.001);
             assertEquals(100.0, entry.awsCo2Kg, 0.001);
             assertNull(entry.azureCo2Kg, "Disabled provider should have no data, not 0");
             assertNull(entry.gcpCo2Kg, "Disabled provider should have no data, not 0");
-            assertEquals(Team.count() * synced.size(), CarbonEntry.count("period in ?1", synced),
+            assertEquals(Team.count() * synced.months(), CarbonEntry.count("period in ?1", synced.periods()),
                     "Every team should be synced for every period");
-            assertEquals(CarbonEntry.count(), CarbonEntry.count("period in ?1", synced),
+            assertEquals(CarbonEntry.count(), CarbonEntry.count("period in ?1", synced.periods()),
                     "No other period should be synced");
         });
+    }
+
+    @Test
+    void syncRecentPeriods_fetchesTheWholeRangeOfEachTeamAtOnce() {
+        PeriodRange synced = carbonDataService.syncRecentPeriods();
+
+        long teamsWithAwsProjects = QuarkusTransaction.requiringNew().call(() ->
+                CloudProject.<CloudProject>list("provider", CloudProvider.AWS).stream()
+                        .map(p -> p.team.id)
+                        .distinct()
+                        .count());
+        assertEquals(List.of(synced), aws.fetchedRanges.stream().distinct().toList(),
+                "Every fetch should cover the whole range");
+        assertEquals(teamsWithAwsProjects, aws.fetchedRanges.size(),
+                "Each team's AWS data should be fetched with one call");
+    }
+
+    @Test
+    void syncRecentPeriods_fetchesOutsideOfTransactions() {
+        aws.co2KgByPeriod.put(period, 100.0);
+
+        QuarkusTransaction.requiringNew().run(() -> carbonDataService.syncRecentPeriods());
+
+        assertFalse(aws.fetchedRanges.isEmpty(), "The AWS data should have been fetched");
+        assertFalse(aws.fetchedInTransaction,
+                "Provider APIs should not be called while a transaction holds a database connection");
+        QuarkusTransaction.requiringNew().run(() -> assertEquals(100.0, CarbonEntry.findByTeamAndPeriod(
+                        Team.findByName(TEAM_ALPHA), period).orElseThrow().totalCo2Kg, 0.001,
+                "The data should be stored in transactions of its own"));
     }
 
     @Test
@@ -114,6 +147,30 @@ class CarbonDataServiceTest {
                     "A failed fetch should not overwrite the stored entry");
             assertEquals(100.0, CarbonEntry.findByTeamAndPeriod(alpha, period).orElseThrow().totalCo2Kg, 0.001,
                     "The other periods should still be updated");
+        });
+    }
+
+    @Test
+    void syncRecentPeriods_keepsAllExistingDataOfATeamWhoseFetchFails() {
+        String older = Periods.previous(period);
+        QuarkusTransaction.requiringNew().run(() -> {
+            createEntry(Team.findByName(TEAM_BETA), older, 999.0);
+            createEntry(Team.findByName(TEAM_BETA), period, 999.0);
+        });
+        aws.co2KgByPeriod.put(period, 100.0);
+        aws.failingProjectIds.add(BETA_AWS_PROJECT);
+
+        carbonDataService.syncRecentPeriods();
+
+        QuarkusTransaction.requiringNew().run(() -> {
+            Team beta = Team.findByName(TEAM_BETA);
+            assertEquals(999.0, CarbonEntry.findByTeamAndPeriod(beta, older).orElseThrow().totalCo2Kg, 0.001,
+                    "A failed fetch should not overwrite any stored entry of the team");
+            assertEquals(999.0, CarbonEntry.findByTeamAndPeriod(beta, period).orElseThrow().totalCo2Kg, 0.001,
+                    "A failed fetch should not overwrite any stored entry of the team");
+            assertEquals(2, CarbonEntry.count("team", beta), "A failed fetch should not create entries");
+            assertEquals(100.0, CarbonEntry.findByTeamAndPeriod(Team.findByName(TEAM_ALPHA), period)
+                    .orElseThrow().totalCo2Kg, 0.001, "The other teams should still be updated");
         });
     }
 
@@ -236,15 +293,19 @@ class CarbonDataServiceTest {
     }
 
     /**
-     * Returns the configured CO2 per period for every project, 0 for unknown periods,
-     * and fails like an unreachable API for the periods in {@link #failingPeriods} and
-     * the projects in {@link #failingProjectIds}.
+     * Returns the configured CO2 per period for every project, 0 for unknown periods.
+     * Leaves out the periods in {@link #failingPeriods} like unpublished data, and fails
+     * like an unreachable API for the projects in {@link #failingProjectIds}. Records
+     * the range of every call in {@link #fetchedRanges}, and in
+     * {@link #fetchedInTransaction} whether any call ran in a transaction.
      */
     static class FakeAwsProvider extends AwsCarbonProvider {
 
         final Map<String, Double> co2KgByPeriod = new HashMap<>();
         final Set<String> failingPeriods = new HashSet<>();
         final Set<String> failingProjectIds = new HashSet<>();
+        final List<PeriodRange> fetchedRanges = new ArrayList<>();
+        boolean fetchedInTransaction = false;
         boolean enabled = true;
 
         @Override
@@ -253,17 +314,22 @@ class CarbonDataServiceTest {
         }
 
         @Override
-        public List<CarbonData> fetchCarbonData(List<CloudProject> projects, String period) {
-            if (failingPeriods.contains(period)) {
-                throw new CarbonDataUnavailableException("AWS unavailable for " + period);
-            }
+        public Map<String, List<CarbonData>> fetchCarbonData(List<CloudProject> projects, PeriodRange range) {
+            fetchedRanges.add(range);
+            fetchedInTransaction |= QuarkusTransaction.isActive();
             if (projects.stream().anyMatch(p -> failingProjectIds.contains(p.projectId))) {
                 throw new CarbonDataUnavailableException("AWS unavailable for some projects");
             }
-            double co2Kg = co2KgByPeriod.getOrDefault(period, 0.0);
-            return projects.stream()
-                    .map(p -> new CarbonData(p.projectId, co2Kg))
-                    .toList();
+            Map<String, List<CarbonData>> results = new HashMap<>();
+            for (String period : range.periods()) {
+                if (!failingPeriods.contains(period)) {
+                    double co2Kg = co2KgByPeriod.getOrDefault(period, 0.0);
+                    results.put(period, projects.stream()
+                            .map(p -> new CarbonData(p.projectId, co2Kg))
+                            .toList());
+                }
+            }
+            return results;
         }
     }
 }

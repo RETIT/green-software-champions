@@ -5,6 +5,8 @@ import io.retit.greensoftware.entity.Achievement;
 import io.retit.greensoftware.entity.Team;
 import io.retit.greensoftware.service.AchievementService;
 import io.retit.greensoftware.service.CarbonDataService;
+import io.retit.greensoftware.util.PeriodRange;
+import io.retit.greensoftware.util.Periods;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -14,7 +16,8 @@ import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
-import java.util.List;
+import java.time.YearMonth;
+import java.time.format.DateTimeParseException;
 
 /**
  * Admin-only REST resource for triggering data synchronisation and managing achievements.
@@ -43,10 +46,9 @@ public class AdminResource {
                description = "Fetches the carbon data of the last carbon.sync.months months, ending at the "
                        + "previous month, from all enabled cloud providers.")
     public Response triggerSync() {
-        List<String> periods = carbonDataService.syncRecentPeriods();
+        PeriodRange range = carbonDataService.syncRecentPeriods();
         return Response.accepted()
-                .entity(new SyncResponse("Sync triggered for periods: "
-                        + periods.getFirst() + " to " + periods.getLast()))
+                .entity(new SyncResponse("Sync triggered for periods: " + range))
                 .build();
     }
 
@@ -59,14 +61,17 @@ public class AdminResource {
     @Path("/sync/{period}")
     @Operation(summary = "Trigger carbon data sync for a specific period")
     public Response triggerSyncForPeriod(@PathParam("period") String period) {
-        if (!period.matches("\\d{4}-\\d{2}")) {
+        YearMonth month;
+        try {
+            month = Periods.toYearMonth(period);
+        } catch (DateTimeParseException e) {
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity(new SyncResponse("Invalid period format. Use YYYY-MM."))
                     .build();
         }
-        carbonDataService.syncForPeriod(period);
+        carbonDataService.syncRange(PeriodRange.of(month));
         return Response.accepted()
-                .entity(new SyncResponse("Sync triggered for period: " + period))
+                .entity(new SyncResponse("Sync triggered for period: " + month))
                 .build();
     }
 

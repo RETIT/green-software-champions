@@ -75,33 +75,42 @@ public class AwsCarbonApiClient {
     }
 
     /**
-     * Retrieves the estimated emissions of the given accounts in {@code month}.
+     * Retrieves the estimated emissions of the given accounts in each month from
+     * {@code first} to {@code last} with a single (paginated) request.
      *
      * @param accountIds AWS account IDs (12-digit numbers), must not be empty.
-     * @param month      The month to retrieve.
-     * @return Emissions in metric tons of CO2-equivalent by account ID. Accounts AWS
-     *         returned no data for are missing.
+     * @param first      The first month to retrieve (inclusive).
+     * @param last       The last month to retrieve (inclusive).
+     * @return Emissions in metric tons of CO2-equivalent by month and account ID. Months
+     *         and accounts AWS returned no data for are missing.
      */
-    public Map<String, Double> getEstimatedEmissions(List<String> accountIds, YearMonth month) {
+    public Map<YearMonth, Map<String, Double>> getEstimatedEmissions(List<String> accountIds,
+                                                                     YearMonth first, YearMonth last) {
         GetEstimatedCarbonEmissionsRequest request = GetEstimatedCarbonEmissionsRequest.builder()
-                .timePeriod(period -> period.start(startOf(month)).end(startOf(month.plusMonths(1))))
+                // The end of the time period is exclusive
+                .timePeriod(period -> period.start(startOf(first)).end(startOf(last.plusMonths(1))))
                 .filterBy(filter -> filter.dimensions(Map.of(Dimension.USAGE_ACCOUNT_ID, accountIds)))
                 .groupBy(Dimension.USAGE_ACCOUNT_ID)
                 .granularity(TimeGranularity.MONTHLY)
                 .build();
 
-        Map<String, Double> metricTonsByAccount = new HashMap<>();
+        Map<YearMonth, Map<String, Double>> metricTonsByMonth = new HashMap<>();
         for (EstimatedCarbonEmissions row : client.getEstimatedCarbonEmissionsPaginator(request).results()) {
             Emissions emissions = row.emissionsValues().get(EMISSIONS_TYPE);
             if (emissions != null) {
-                metricTonsByAccount.merge(row.dimensionsValues().get(Dimension.USAGE_ACCOUNT_ID),
-                        emissions.value(), Double::sum);
+                metricTonsByMonth.computeIfAbsent(monthOf(row), month -> new HashMap<>())
+                        .merge(row.dimensionsValues().get(Dimension.USAGE_ACCOUNT_ID), emissions.value(), Double::sum);
             }
         }
-        return metricTonsByAccount;
+        return metricTonsByMonth;
     }
 
     private static Instant startOf(YearMonth month) {
         return month.atDay(1).atStartOfDay(ZoneOffset.UTC).toInstant();
+    }
+
+    /** The month {@code row} reports on, as rows of the monthly granularity cover one month each. */
+    private static YearMonth monthOf(EstimatedCarbonEmissions row) {
+        return YearMonth.from(row.timePeriod().start().atZone(ZoneOffset.UTC));
     }
 }

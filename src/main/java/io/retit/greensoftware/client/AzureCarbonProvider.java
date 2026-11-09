@@ -2,6 +2,7 @@ package io.retit.greensoftware.client;
 
 import io.retit.greensoftware.config.CloudProvidersConfig;
 import io.retit.greensoftware.entity.CloudProject;
+import io.retit.greensoftware.util.PeriodRange;
 import io.retit.greensoftware.util.Periods;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -11,6 +12,7 @@ import org.jboss.logging.Logger;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Azure carbon footprint data provider.
@@ -43,10 +45,10 @@ public class AzureCarbonProvider implements CarbonProvider {
     }
 
     @Override
-    public List<CarbonData> fetchCarbonData(List<CloudProject> projects, String period) {
+    public Map<String, List<CarbonData>> fetchCarbonData(List<CloudProject> projects, PeriodRange range) {
         if (!isEnabled()) {
             LOG.debug("Azure carbon provider is disabled; returning empty data.");
-            return List.of();
+            return Map.of();
         }
 
         String bearerToken = acquireAccessToken();
@@ -54,6 +56,16 @@ public class AzureCarbonProvider implements CarbonProvider {
             throw new CarbonDataUnavailableException("Could not acquire Azure access token.");
         }
 
+        // The API returns one month per request
+        return CarbonProvider.fetchEachPeriod(range, period -> fetchPeriod(projects, period, bearerToken));
+    }
+
+    /**
+     * Fetches the data of all {@code projects} in {@code period}.
+     *
+     * @throws CarbonDataUnavailableException if the data of any project could not be fetched
+     */
+    private List<CarbonData> fetchPeriod(List<CloudProject> projects, String period, String bearerToken) {
         List<CarbonData> results = new ArrayList<>();
         YearMonth ym = Periods.toYearMonth(period);
 
