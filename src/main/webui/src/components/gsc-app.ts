@@ -4,6 +4,7 @@ import { customElement, property, state } from "lit/decorators.js";
 import { classMap } from "lit/directives/class-map.js";
 import { live } from "lit/directives/live.js";
 import type {
+  Achievement,
   HistoryPoint,
   LeaderboardEntry,
   LeaderboardSummary,
@@ -112,6 +113,30 @@ export class GscApp extends LitElement {
     // One period more than charted, so the oldest charted one has a predecessor
     const periods = periodWindow(period, HISTORY_MONTHS + 1);
     const previousPeriod = periods[periods.length - 2];
+    // Title and badge icon of each achievement type, as the backend grants them
+    const achievementKinds: Record<string, [string, string]> = {
+      HIGHEST_REDUCTION: ["Reduction Champion", "🏆"],
+      MOST_CO2_SAVED: ["Most CO₂e Saved", "💪"],
+      GREEN_STREAK: ["Green Streak", "🌱"],
+    };
+    const achievement = (
+      id: number,
+      type: string,
+      awardPeriod: string,
+      threshold: number | null = null,
+      tier: number | null = null,
+    ): Achievement => ({
+      id,
+      title: achievementKinds[type][0],
+      description: null,
+      criteria: null,
+      badgeIcon: achievementKinds[type][1],
+      period: awardPeriod,
+      type,
+      threshold,
+      tier,
+      measuredValue: null,
+    });
     // Like the backend, compare daily averages so months of different length
     // are comparable
     const reduction = (previous: number, current: number) => {
@@ -153,37 +178,17 @@ export class GscApp extends LitElement {
           gcpCo2Kg: current * 0.25,
           companySharePercent: 0,
           history,
+          // Latest first, like the API
           achievements:
             i === 0
               ? [
-                  {
-                    id: 1,
-                    title: "Carbon Neutral Pioneer",
-                    description: null,
-                    badgeIcon: "🌍",
-                    period,
-                    type: "FIRST_NET_ZERO",
-                  },
-                  {
-                    id: 2,
-                    title: "Reduction Champion",
-                    description: null,
-                    badgeIcon: "🏆",
-                    period,
-                    type: "HIGHEST_REDUCTION",
-                  },
+                  achievement(1, "HIGHEST_REDUCTION", period),
+                  achievement(2, "GREEN_STREAK", period, 6, 2),
+                  achievement(3, "HIGHEST_REDUCTION", previousPeriod),
+                  achievement(5, "GREEN_STREAK", periods[periods.length - 4], 3, 1),
                 ]
               : i === 3
-                ? [
-                    {
-                      id: 3,
-                      title: "Leaderboard Leader",
-                      description: null,
-                      badgeIcon: "🥇",
-                      period,
-                      type: "LEADERBOARD_LEADER",
-                    },
-                  ]
+                ? [achievement(4, "MOST_CO2_SAVED", period)]
                 : [],
         };
       })

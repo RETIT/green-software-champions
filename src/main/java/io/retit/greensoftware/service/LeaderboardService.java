@@ -46,6 +46,7 @@ public class LeaderboardService {
                 .stream()
                 .collect(Collectors.groupingBy(e -> e.team.id,
                         Collectors.toMap(e -> e.period, e -> e)));
+        Map<Long, List<AchievementDto>> achievementsByTeam = findAchievementsByTeam(resolvedPeriod);
         double companyTotal = entries.stream()
                 .filter(e -> e.totalCo2Kg != null)
                 .mapToDouble(e -> e.totalCo2Kg)
@@ -74,10 +75,7 @@ public class LeaderboardService {
             dto.companySharePercent = (companyTotal > 0 && entry.totalCo2Kg != null)
                     ? (entry.totalCo2Kg / companyTotal) * 100.0
                     : null;
-            dto.achievements = Achievement.findByTeam(entry.team)
-                    .stream()
-                    .map(this::toAchievementDto)
-                    .collect(Collectors.toList());
+            dto.achievements = achievementsByTeam.getOrDefault(entry.team.id, List.of());
             dto.history = toTeamHistory(window, historyByTeam.getOrDefault(entry.team.id, Map.of()));
             result.add(dto);
         }
@@ -94,10 +92,7 @@ public class LeaderboardService {
                 dto.teamIcon = team.icon;
                 dto.rank = rank++;
                 dto.period = resolvedPeriod;
-                dto.achievements = Achievement.findByTeam(team)
-                        .stream()
-                        .map(this::toAchievementDto)
-                        .collect(Collectors.toList());
+                dto.achievements = achievementsByTeam.getOrDefault(team.id, List.of());
                 dto.history = toTeamHistory(window, historyByTeam.getOrDefault(team.id, Map.of()));
                 result.add(dto);
             }
@@ -239,14 +234,19 @@ public class LeaderboardService {
                 .orElse(null);
     }
 
-    private AchievementDto toAchievementDto(Achievement a) {
-        AchievementDto dto = new AchievementDto();
-        dto.id = a.id;
-        dto.title = a.title;
-        dto.description = a.description;
-        dto.badgeIcon = a.badgeIcon;
-        dto.period = a.period;
-        dto.type = a.type != null ? a.type.name() : null;
-        return dto;
+    /**
+     * The achievements of each team as of {@code period}, latest first, keyed by team
+     * id: those awarded for {@code period} or earlier. When showing the latest period
+     * every team has data for (the default), all achievements are included, so that
+     * e.g. a custom achievement granted in the current month is shown as well.
+     */
+    private Map<Long, List<AchievementDto>> findAchievementsByTeam(String period) {
+        // YYYY-MM strings sort chronologically
+        List<Achievement> achievements = period.compareTo(resolvePeriod(null)) >= 0
+                ? Achievement.findAllLatestFirst()
+                : Achievement.findUpTo(period);
+        return achievements.stream()
+                .collect(Collectors.groupingBy(a -> a.team.id,
+                        Collectors.mapping(AchievementDto::from, Collectors.toList())));
     }
 }

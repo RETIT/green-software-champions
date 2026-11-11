@@ -176,11 +176,18 @@ class CarbonDataServiceTest {
 
     @Test
     void syncRecentPeriods_evaluatesEveryCompletePeriodOnce() {
+        // 20% less every month, so that achievements are awarded
+        List<String> periods = Periods.window(period, syncConfig.months());
+        for (int i = 0; i < periods.size(); i++) {
+            aws.co2KgByPeriod.put(periods.get(i), 1000.0 * Math.pow(0.8, i));
+        }
+
         carbonDataService.syncRecentPeriods();
 
         QuarkusTransaction.requiringNew().run(() -> {
             assertEquals(syncConfig.months(), AchievementEvaluation.count(),
                     "Every synced period should be evaluated");
+            assertTrue(Achievement.count() > 0, "The reductions should be awarded");
             Achievement.deleteAll();
         });
 
@@ -201,9 +208,6 @@ class CarbonDataServiceTest {
             Team gamma = Team.findByName(TEAM_GAMMA);
             CarbonEntry entry = CarbonEntry.findByTeamAndPeriod(gamma, period).orElseThrow();
             assertNull(entry.totalCo2Kg, "No provider data should be no total, not 0");
-            assertTrue(Achievement.findByTeam(gamma).stream()
-                            .noneMatch(a -> a.type == AchievementType.FIRST_NET_ZERO),
-                    TEAM_GAMMA + " should not be awarded net zero without any data");
         });
     }
 
@@ -240,20 +244,20 @@ class CarbonDataServiceTest {
 
     @Test
     void syncForPeriod_evaluatesAchievementsOnceEveryTeamHasData() {
-        aws.co2KgByPeriod.put(period, 100.0);
+        createAlphaReduction();
 
         carbonDataService.syncForPeriod(period);
 
         QuarkusTransaction.requiringNew().run(() ->
-                assertEquals(1, Achievement.count("type", AchievementType.LEADERBOARD_LEADER),
+                assertEquals(1, Achievement.count("type", AchievementType.HIGHEST_REDUCTION),
                         "Achievements should be evaluated for a complete period"));
     }
 
     @Test
     void syncForPeriod_skipsAchievementsWhileThePeriodIsIncomplete() {
-        aws.co2KgByPeriod.put(period, 100.0);
         // AWS has not published Beta's account yet, so Beta gets no entry, while the
-        // other teams have data that would be awarded (e.g., LEADERBOARD_LEADER)
+        // other teams have data that would be awarded (Alpha's reduction)
+        createAlphaReduction();
         aws.failingProjectIds.add(BETA_AWS_PROJECT);
 
         carbonDataService.syncForPeriod(period);
@@ -267,7 +271,7 @@ class CarbonDataServiceTest {
 
     @Test
     void syncForPeriod_evaluatesAPreviouslyIncompletePeriodOnceComplete() {
-        aws.co2KgByPeriod.put(period, 100.0);
+        createAlphaReduction();
         aws.failingProjectIds.add(BETA_AWS_PROJECT);
         carbonDataService.syncForPeriod(period);
 
@@ -275,13 +279,23 @@ class CarbonDataServiceTest {
         carbonDataService.syncForPeriod(period);
 
         QuarkusTransaction.requiringNew().run(() ->
-                assertEquals(1, Achievement.count("type", AchievementType.LEADERBOARD_LEADER),
+                assertEquals(1, Achievement.count("type", AchievementType.HIGHEST_REDUCTION),
                         "Achievements should be evaluated once the period is complete"));
     }
 
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
+
+    /**
+     * Makes the sync of {@link #period} a reduction for Alpha, which is awarded once the
+     * period is evaluated: 100 kg CO2e from AWS, after 200 kg in the previous period.
+     */
+    private void createAlphaReduction() {
+        aws.co2KgByPeriod.put(period, 100.0);
+        QuarkusTransaction.requiringNew().run(() ->
+                createEntry(Team.findByName(TEAM_ALPHA), Periods.previous(period), 200.0));
+    }
 
     private void createEntry(Team team, String period, Double totalCo2) {
         CarbonEntry entry = new CarbonEntry();

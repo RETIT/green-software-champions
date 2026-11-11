@@ -97,15 +97,7 @@ public class AdminResource {
         }
         Achievement achievement = achievementService.grantCustomAchievement(
                 team, request.title(), request.description(), request.badgeIcon());
-
-        AchievementDto dto = new AchievementDto();
-        dto.id = achievement.id;
-        dto.title = achievement.title;
-        dto.description = achievement.description;
-        dto.badgeIcon = achievement.badgeIcon;
-        dto.period = achievement.period;
-        dto.type = achievement.type.name();
-        return Response.status(Response.Status.CREATED).entity(dto).build();
+        return Response.status(Response.Status.CREATED).entity(AchievementDto.from(achievement)).build();
     }
 
     /** Simple response wrapper. */

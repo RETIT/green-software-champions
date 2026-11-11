@@ -2,27 +2,36 @@ import { LitElement, css, html, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { classMap } from "lit/directives/class-map.js";
 import type { Achievement } from "../types.ts";
+import { groupBadge, groupTooltip } from "../util/achievements.ts";
 
 /**
- * Achievement badge component. Renders a small pill/chip showing the
- * achievement icon and title. Supports a compact mode for inline display.
+ * Achievement badge component. Renders a small pill/chip showing the icon and
+ * title of a group of achievements of the same kind (see `groupAchievements`),
+ * with the highest tier reached for achievements with tiers, and the number of
+ * times it was awarded or that tier was reached if more than once (see
+ * `groupBadge`). Supports a compact mode for inline display, which leaves out the
+ * title and tier, as the tooltip names both.
  */
 @customElement("gsc-achievement-badge")
 export class GscAchievementBadge extends LitElement {
-  @property({ type: Object }) achievement?: Achievement;
+  /** Achievements of the same kind, latest first. */
+  @property({ type: Array }) achievements: Achievement[] = [];
   @property({ type: Boolean }) compact = false;
 
   override render() {
-    const a = this.achievement;
-    if (!a) return nothing;
+    const latest = this.achievements[0];
+    if (!latest) return nothing;
+    const { tier, count } = groupBadge(this.achievements);
 
     return html`
       <span
         class="badge ${classMap({ compact: this.compact })}"
-        title="${a.description || a.title}"
+        title="${groupTooltip(this.achievements)}"
       >
-        <span class="icon">${a.badgeIcon || "🏅"}</span>
-        ${!this.compact ? html`<span class="title">${a.title}</span>` : nothing}
+        <span class="icon">${latest.badgeIcon || "🏅"}</span>
+        ${!this.compact ? html`<span class="title">${latest.title}</span>` : nothing}
+        ${tier && !this.compact ? html`<span class="tier">${tier}</span>` : nothing}
+        ${count > 1 ? html`<span class="count">×${count}</span>` : nothing}
       </span>
     `;
   }
@@ -67,6 +76,19 @@ export class GscAchievementBadge extends LitElement {
     }
     .title {
       font-size: 0.9em;
+    }
+    .tier {
+      font-size: 0.9em;
+      font-weight: 600;
+    }
+    .count {
+      font-size: 0.8em;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+    .compact .count {
+      font-size: 0.6em;
+      align-self: flex-end;
     }
   `;
 }

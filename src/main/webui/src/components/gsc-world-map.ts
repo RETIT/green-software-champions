@@ -4,6 +4,7 @@ import { classMap } from "lit/directives/class-map.js";
 import { repeat } from "lit/directives/repeat.js";
 import { styleMap } from "lit/directives/style-map.js";
 import type { LeaderboardEntry } from "../types.ts";
+import { groupAchievements, groupLabel } from "../util/achievements.ts";
 import {
   formatCo2,
   formatPercent,
@@ -184,7 +185,7 @@ export class GscWorldMap extends LitElement {
                     t.entry.achievements && t.entry.achievements.length > 0
                       ? html`
                           <div class="tooltip-row tooltip-achievements">
-                            ${t.entry.achievements.map((a) => html`<span title="${a.title}">${a.badgeIcon || "🏅"}</span>`)}
+                            ${groupAchievements(t.entry.achievements).map((group) => html`<span title="${groupLabel(group)}">${group[0].badgeIcon || "🏅"}</span>`)}
                           </div>
                         `
                       : nothing

@@ -59,6 +59,12 @@ public class CarbonEntry extends PanacheEntity {
         return list("period in ?1", periods);
     }
 
+    /** The entries of all teams for {@code period} and every earlier period. */
+    public static List<CarbonEntry> findUpTo(String period) {
+        // YYYY-MM strings sort chronologically
+        return list("period <= ?1", period);
+    }
+
     /**
      * The periods of {@code periods} that have an entry for every team, latest first.
      * Entries are unique per team and period and are deleted with their team, so
@@ -79,9 +85,5 @@ public class CarbonEntry extends PanacheEntity {
         return Optional.ofNullable(getEntityManager()
                 .createQuery("select min(e.period) from CarbonEntry e", String.class)
                 .getSingleResult());
-    }
-
-    public static List<CarbonEntry> findByTeamOrderByPeriodDesc(Team team) {
-        return list("team = ?1 order by period desc", team);
     }
 }

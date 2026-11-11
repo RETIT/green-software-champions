@@ -3,6 +3,7 @@ import { customElement, property, state } from "lit/decorators.js";
 import { classMap } from "lit/directives/class-map.js";
 import { styleMap } from "lit/directives/style-map.js";
 import type { LeaderboardEntry } from "../types.ts";
+import { groupAchievements, groupLabel } from "../util/achievements.ts";
 import {
   formatCo2,
   formatPercent,
@@ -24,8 +25,8 @@ export class GscTeamCard extends LitElement {
     const e = this.entry;
     if (!e) return nothing;
 
-    const achievements = e.achievements || [];
-    const hiddenAchievements = achievements.slice(3);
+    const achievementGroups = groupAchievements(e.achievements || []);
+    const hiddenGroups = achievementGroups.slice(3);
     const history = e.history || [];
 
     return html`
@@ -45,24 +46,24 @@ export class GscTeamCard extends LitElement {
           </div>
 
           <div class="achievements">
-            ${achievements
+            ${achievementGroups
               .slice(0, 3)
               .map(
-                (a) => html`
+                (group) => html`
                   <gsc-achievement-badge
-                    .achievement="${a}"
+                    .achievements="${group}"
                     compact
                   ></gsc-achievement-badge>
                 `,
               )}
             ${
-              hiddenAchievements.length > 0
+              hiddenGroups.length > 0
                 ? html`
                     <span
                       class="more-achievements"
-                      title="${hiddenAchievements.map((a) => a.title).join(",\n")}"
+                      title="${hiddenGroups.map(groupLabel).join(",\n")}"
                     >
-                      +${hiddenAchievements.length}
+                      +${hiddenGroups.length}
                     </span>
                   `
                 : nothing
@@ -162,15 +163,15 @@ export class GscTeamCard extends LitElement {
                       : nothing
                   }
                   ${
-                    e.achievements && e.achievements.length > 0
+                    achievementGroups.length > 0
                       ? html`
                           <div>
                             <div class="expand-label">🏅 Achievements</div>
                             <div class="achievement-list">
-                              ${e.achievements.map(
-                                (a) => html`
+                              ${achievementGroups.map(
+                                (group) => html`
                                   <gsc-achievement-badge
-                                    .achievement="${a}"
+                                    .achievements="${group}"
                                   ></gsc-achievement-badge>
                                 `,
                               )}

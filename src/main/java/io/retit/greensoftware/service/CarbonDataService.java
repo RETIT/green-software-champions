@@ -190,7 +190,7 @@ public class CarbonDataService {
      * revision of their data does not award e.g. a second leaderboard leader.
      */
     @Transactional
-    void evaluateNewCompletePeriods(List<String> periods) {
+    public void evaluateNewCompletePeriods(List<String> periods) {
         List<String> evaluated = AchievementEvaluation.findEvaluatedPeriods(periods);
         List<String> complete = CarbonEntry.findCompletePeriods(periods).reversed();
         for (String period : complete) {

@@ -1,6 +1,9 @@
 package io.retit.greensoftware;
 
+import io.retit.greensoftware.dto.AchievementDto;
 import io.retit.greensoftware.dto.LeaderboardEntryDto;
+import io.retit.greensoftware.entity.Achievement;
+import io.retit.greensoftware.entity.AchievementType;
 import io.retit.greensoftware.entity.CarbonEntry;
 import io.retit.greensoftware.entity.Team;
 import io.retit.greensoftware.service.LeaderboardService;
@@ -34,6 +37,7 @@ class LeaderboardServiceTest {
     @Transactional
     void setUp() {
         // Clean up any leftover data
+        Achievement.deleteAll();
         CarbonEntry.deleteAll();
     }
 
@@ -283,6 +287,45 @@ class LeaderboardServiceTest {
 
     @Test
     @Transactional
+    void getLeaderboard_showsOnlyAchievementsUpToTheSelectedPeriod() {
+        String previous = Periods.previous();
+        String beforePrevious = Periods.previous(previous);
+        for (Team team : Team.<Team>listAll()) {
+            createEntry(team, beforePrevious, 100.0);
+            createEntry(team, previous, 100.0);
+        }
+        Team alpha = Team.findByName(TEAM_ALPHA);
+        createAchievement(alpha, AchievementType.HIGHEST_REDUCTION, beforePrevious);
+        createAchievement(alpha, AchievementType.HIGHEST_REDUCTION, previous);
+
+        assertEquals(List.of(beforePrevious),
+                achievementPeriods(leaderboardService.getLeaderboard(beforePrevious), TEAM_ALPHA),
+                "Achievements awarded after the selected period should not be shown");
+        assertEquals(List.of(previous, beforePrevious),
+                achievementPeriods(leaderboardService.getLeaderboard(previous), TEAM_ALPHA),
+                "Achievements should be shown latest first");
+    }
+
+    @Test
+    @Transactional
+    void getLeaderboard_showsAchievementsOfTheCurrentMonthForTheLatestPeriod() {
+        String previous = Periods.previous();
+        for (Team team : Team.<Team>listAll()) {
+            createEntry(team, previous, 100.0);
+        }
+        // Granted after the latest period every team has data for
+        createAchievement(Team.findByName(TEAM_ALPHA), AchievementType.CUSTOM, Periods.current());
+
+        assertEquals(List.of(Periods.current()),
+                achievementPeriods(leaderboardService.getLeaderboard(null), TEAM_ALPHA),
+                "A recent custom achievement should be shown for the latest period");
+        assertEquals(List.of(Periods.current()),
+                achievementPeriods(leaderboardService.getLeaderboard(previous), TEAM_ALPHA),
+                "Selecting the latest period explicitly should be the same as the default");
+    }
+
+    @Test
+    @Transactional
     void getLeaderboard_includesHistoryForTeamsWithoutCurrentData() {
         Team alpha = Team.findByName(TEAM_ALPHA);
         Team beta = Team.findByName(TEAM_BETA);
@@ -351,6 +394,21 @@ class LeaderboardServiceTest {
         return leaderboard.stream()
                 .filter(e -> teamName.equals(e.teamName))
                 .findFirst().orElseThrow();
+    }
+
+    private static List<String> achievementPeriods(List<LeaderboardEntryDto> leaderboard, String teamName) {
+        return findEntry(leaderboard, teamName).achievements.stream()
+                .map((AchievementDto a) -> a.period)
+                .toList();
+    }
+
+    private void createAchievement(Team team, AchievementType type, String period) {
+        Achievement achievement = new Achievement();
+        achievement.team = team;
+        achievement.type = type;
+        achievement.title = type == AchievementType.CUSTOM ? "Shoutout" : type.title;
+        achievement.period = period;
+        achievement.persist();
     }
 
     private void createEntry(Team team, String period, Double totalCo2) {

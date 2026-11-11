@@ -1,8 +1,6 @@
 package io.retit.greensoftware.service;
 
 import io.retit.greensoftware.config.CarbonHistoryConfig;
-import io.retit.greensoftware.entity.Achievement;
-import io.retit.greensoftware.entity.AchievementType;
 import io.retit.greensoftware.entity.CarbonEntry;
 import io.retit.greensoftware.entity.Team;
 import io.retit.greensoftware.util.Periods;
@@ -33,8 +31,12 @@ public class DevSampleDataService {
     @Inject
     CarbonHistoryConfig historyConfig;
 
+    @Inject
+    CarbonDataService carbonDataService;
+
     /**
-     * Seeds sample carbon entries and achievements for all configured teams.
+     * Seeds sample carbon entries for all configured teams and evaluates their
+     * achievements like a sync does, so the sample achievements follow the rules.
      * Must be called after {@link TeamSetupService#initialiseTeams()} so that
      * {@link Team} records already exist in the database.
      */
@@ -93,7 +95,7 @@ public class DevSampleDataService {
             }
         }
 
-        seedAchievements(periods.getLast());
+        carbonDataService.evaluateNewCompletePeriods(periods);
         LOG.infof("Dev sample data seeding complete – %d carbon entr%s inserted.",
                 inserted, inserted == 1 ? "y" : "ies");
     }
@@ -101,44 +103,6 @@ public class DevSampleDataService {
     /** Scales a provider value by {@code factor}, rounded to one decimal. */
     private static Double scale(Double value, double factor) {
         return value == null ? null : Math.round(value * factor * 10) / 10.0;
-    }
-
-    // -------------------------------------------------------------------------
-    // Achievements
-    // -------------------------------------------------------------------------
-
-    /** Seeds the sample achievements, all awarded for {@code period}. */
-    private void seedAchievements(String period) {
-        // Winner: biggest relative reduction
-        insertAchievement(period, "Team Gamma",  "🌱 Green Streak",
-                "Three months of consecutive carbon reduction!",     "🌱", AchievementType.GREEN_STREAK);
-        insertAchievement(period, "Team Gamma",  "⚡ Efficiency Expert",
-                "Reduced cloud carbon footprint by over 32 % in a single month.", "⚡", AchievementType.EFFICIENCY_EXPERT);
-
-        // Runner-up: absolute lowest footprint history
-        insertAchievement(period, "Team Alpha",  "🏆 Leaderboard Leader",
-                "Held the top spot on the leaderboard last month.",  "🏆", AchievementType.LEADERBOARD_LEADER);
-
-        // Large team with good absolute saving
-        insertAchievement(period, "Team Delta",  "💧 Big Saver",
-                "Saved over 32 kg CO₂ compared to the previous month.", "💧", AchievementType.BIG_SAVER);
-    }
-
-    private void insertAchievement(String period, String teamName, String title, String description,
-                                   String icon, AchievementType type) {
-        Team team = Team.findByName(teamName);
-        if (team == null) return;
-        long exists = Achievement.count("team = ?1 and type = ?2", team, type);
-        if (exists == 0) {
-            Achievement a = new Achievement();
-            a.team        = team;
-            a.title       = title;
-            a.description = description;
-            a.badgeIcon   = icon;
-            a.period      = period;
-            a.type        = type;
-            a.persist();
-        }
     }
 
     // -------------------------------------------------------------------------
