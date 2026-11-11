@@ -187,7 +187,7 @@ public class CarbonDataService {
      * skipped, as rankings would only cover the teams whose providers have already
      * published, and awards are never revoked. A later sync re-fetching the period
      * evaluates it once the data is complete. Periods are evaluated only once, so a
-     * revision of their data does not award e.g. a second leaderboard leader.
+     * revision of their data does not award e.g. a second Reduction Champion.
      */
     @Transactional
     public void evaluateNewCompletePeriods(List<String> periods) {
