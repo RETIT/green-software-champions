@@ -1,8 +1,10 @@
 # =============================================================================
 # Green Software Champions – Application Configuration
 # =============================================================================
-# All sensitive values should be supplied via environment variables.
-# Defaults are provided for local development convenience only.
+# Sensitive values (database and Keycloak credentials and URLs) have no
+# defaults: they are set in %prod and must be supplied via environment
+# variables, otherwise the application refuses to start. In dev mode, Quarkus
+# Dev Services provide them; the test profile uses an H2 in-memory database.
 # =============================================================================
 
 quarkus:
@@ -14,13 +16,12 @@ quarkus:
 
   # ---------------------------------------------------------------------------
   # Datasource – PostgreSQL (production) / H2 (test profile)
-  # jdbc.url is intentionally absent here so that Quarkus Dev Services can
-  # start a managed container in dev mode. The production URL is set in %prod.
+  # jdbc.url and the credentials are intentionally absent here so that Quarkus
+  # Dev Services can start a managed container in dev mode with its own
+  # credentials. The production URL and credentials are set in %prod.
   # ---------------------------------------------------------------------------
   datasource:
     db-kind: postgresql
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:postgres}
 
   hibernate-orm:
     log:
@@ -37,15 +38,15 @@ quarkus:
 
   # ---------------------------------------------------------------------------
   # OIDC – Keycloak integration
-  # auth-server-url is intentionally absent here so that Quarkus Dev Services
-  # can start a managed Keycloak container in dev mode. Set in %prod.
+  # auth-server-url and the client secret are intentionally absent here so that
+  # Quarkus Dev Services can start a managed Keycloak container in dev mode and
+  # register the client with its own secret. Both are set in %prod.
+  # TLS certificates are always verified. If Keycloak uses a certificate of an
+  # internal CA, add the CA to a truststore of the TLS registry and reference it
+  # via quarkus.oidc.tls.tls-configuration-name instead of disabling the check.
   # ---------------------------------------------------------------------------
   oidc:
     client-id: ${KEYCLOAK_CLIENT_ID:green-champions}
-    credentials:
-      secret: ${KEYCLOAK_SECRET:change-me-in-production}
-    tls:
-      verification: none
     # Token roles location (adjust to your Keycloak realm role mapping)
     roles:
       source: accesstoken
@@ -63,12 +64,12 @@ quarkus:
 
   # ---------------------------------------------------------------------------
   # HTTP
+  # No CORS: the browser only ever talks to its own origin. Quinoa serves the
+  # frontend from this application, in dev mode by proxying the Vite dev
+  # server, and Vite's own dev server proxies /api to this backend.
   # ---------------------------------------------------------------------------
   http:
     port: 8080
-    cors:
-      ~: true
-      origins: ${CORS_ORIGINS:http://localhost:5173,http://localhost:8080}
 
   # ---------------------------------------------------------------------------
   # REST Clients for cloud provider APIs
@@ -82,13 +83,10 @@ quarkus:
       scope: jakarta.inject.Singleton
 
   # ---------------------------------------------------------------------------
-  # Logging
+  # Logging (DEBUG for the application's own classes is enabled in %dev)
   # ---------------------------------------------------------------------------
   log:
     level: INFO
-    category:
-      "io.retit.greensoftware":
-        level: DEBUG
 
 # =============================================================================
 # Cloud Provider Configuration
@@ -191,15 +189,22 @@ teams:
           project-name: "Delta Azure Resource Group"
 
 # =============================================================================
-# Production profile – real database and Keycloak URLs
+# Production profile – real database and Keycloak URLs and credentials
+# Variables without a default (${VAR}) are required: the application refuses
+# to start if one is missing, rather than falling back to an insecure or
+# local value.
 # =============================================================================
 "%prod":
   quarkus:
     datasource:
+      username: ${DB_USERNAME}
+      password: ${DB_PASSWORD}
       jdbc:
-        url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:greensoft}
+        url: jdbc:postgresql://${DB_HOST}:${DB_PORT:5432}/${DB_NAME:greensoft}
     oidc:
-      auth-server-url: ${KEYCLOAK_URL:http://localhost:8180}/realms/${KEYCLOAK_REALM:green-software}
+      auth-server-url: ${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM:green-software}
+      credentials:
+        secret: ${KEYCLOAK_SECRET}
 
 # =============================================================================
 # Test profile overrides
@@ -260,6 +265,11 @@ teams:
       log:
         sql: true
 #        bind-parameters: false
+
+    log:
+      category:
+        "io.retit.greensoftware":
+          level: DEBUG
 
     security:
       auth:
