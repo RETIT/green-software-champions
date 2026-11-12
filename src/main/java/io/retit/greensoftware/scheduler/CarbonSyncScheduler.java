@@ -16,10 +16,10 @@ import org.jboss.logging.Logger;
  * Each sync also re-fetches the months before it ({@code carbon.sync.months} in
  * total), as the providers may revise already published data.
  *
- * <p>{@link ApplicationStartup} also runs a sync at every startup and waits for it, so a
- * new installation does not have to wait for the next scheduled sync. Before the 25th, the
- * providers may not have published the previous month yet. It then stays incomplete until
- * a later sync.
+ * <p>{@link ApplicationStartup} also runs a sync at every startup with an enabled cloud
+ * provider and waits for it, so a new installation does not have to wait for the next
+ * scheduled sync. Before the 25th, the providers may not have published the previous
+ * month yet. It then stays incomplete until a later sync.
  *
  * <p>The schedule can be overridden in application.yaml via
  * {@code quarkus.scheduler.cron-type} or by providing a custom cron expression

@@ -176,8 +176,9 @@ public class CarbonDataService {
     /**
      * Without any enabled provider a sync has nothing to fetch and would only replace
      * the stored data (e.g., the dev sample data) with entries without emissions.
+     * Conversely, the dev sample data is only seeded when no provider is enabled.
      */
-    private boolean anyProviderEnabled() {
+    public boolean anyProviderEnabled() {
         return awsProvider.isEnabled() || azureProvider.isEnabled() || gcpProvider.isEnabled();
     }
 
