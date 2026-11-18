@@ -3,7 +3,6 @@
 -- =============================================================================
 
 -- Hibernate ORM 6 uses sequences for ID generation.
--- Create them here so H2 (in PostgreSQL mode) and PostgreSQL both work.
 CREATE SEQUENCE IF NOT EXISTS teams_seq        START WITH 1 INCREMENT BY 50;
 CREATE SEQUENCE IF NOT EXISTS cloud_projects_seq START WITH 1 INCREMENT BY 50;
 CREATE SEQUENCE IF NOT EXISTS carbon_entries_seq START WITH 1 INCREMENT BY 50;

@@ -26,19 +26,19 @@ public class CarbonEntry extends PanacheEntity {
     public String period;
 
     /** Total CO2-equivalent emissions in kg for this period. */
-    @Column(name = "total_co2_kg", columnDefinition = "NUMERIC(20,4)")
+    @Column(name = "total_co2_kg", columnDefinition = "DECIMAL(20,4)")
     public Double totalCo2Kg;
 
     @Column(name = "sync_timestamp")
     public Instant syncTimestamp;
 
-    @Column(name = "aws_co2_kg", columnDefinition = "NUMERIC(20,4)")
+    @Column(name = "aws_co2_kg", columnDefinition = "DECIMAL(20,4)")
     public Double awsCo2Kg;
 
-    @Column(name = "azure_co2_kg", columnDefinition = "NUMERIC(20,4)")
+    @Column(name = "azure_co2_kg", columnDefinition = "DECIMAL(20,4)")
     public Double azureCo2Kg;
 
-    @Column(name = "gcp_co2_kg", columnDefinition = "NUMERIC(20,4)")
+    @Column(name = "gcp_co2_kg", columnDefinition = "DECIMAL(20,4)")
     public Double gcpCo2Kg;
 
     public static Optional<CarbonEntry> findByTeamAndPeriod(Team team, String period) {

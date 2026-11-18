@@ -4,11 +4,11 @@
 # ${NAME:default} reads the environment variable (or property) NAME and falls
 # back to default; ${NAME} without a default is required, so the application
 # refuses to start without it.
-# The database and Keycloak URLs and credentials and the teams file are only
-# configured in %prod, without defaults, so production never falls back to a
-# local, insecure or sample value. In dev mode, Quarkus Dev Services provide
-# the database and Keycloak; tests use an H2 in-memory database and no
-# Keycloak. Dev mode and tests use the sample teams.
+# The database file, the Keycloak URL and credentials and the teams file are
+# only configured in %prod, without defaults, so production never falls back
+# to a local, insecure or sample value. Dev mode stores the database in a file
+# under ./data and Quarkus Dev Services provide Keycloak; tests use an H2
+# in-memory database and no Keycloak. Dev mode and tests use the sample teams.
 # =============================================================================
 
 quarkus:
@@ -25,10 +25,14 @@ quarkus:
     locations: sample-teams.yaml
 
   # ---------------------------------------------------------------------------
-  # Database – PostgreSQL (URL and credentials in %prod)
+  # Database – H2, embedded and stored in a file (path in %dev and %prod)
+  # Only one process can open the file at a time. The user has no password, as
+  # it wouldn't protect the data: whoever can read the file can read the data,
+  # so the file system permissions protect it.
   # ---------------------------------------------------------------------------
   datasource:
-    db-kind: postgresql
+    db-kind: h2
+    username: gsc
 
   hibernate-orm:
     # Flyway owns the schema: Hibernate neither creates nor changes it.
@@ -134,7 +138,7 @@ carbon:
     months: ${CARBON_HISTORY_MONTHS:13}
 
 # =============================================================================
-# Production profile – database and Keycloak URLs and credentials, teams file
+# Production profile – database file, Keycloak URL and credentials, teams file
 # =============================================================================
 "%prod":
   quarkus:
@@ -145,11 +149,13 @@ carbon:
     config:
       locations: ${TEAMS_FILE}
 
+    # Path of the H2 database file without its extension .mv.db, e.g.
+    # /var/lib/green-champions/greensoft. H2 only accepts an absolute path or
+    # one starting with ./ or ~/, and creates the file and its directories at
+    # the first start.
     datasource:
-      username: ${DB_USERNAME}
-      password: ${DB_PASSWORD}
       jdbc:
-        url: jdbc:postgresql://${DB_HOST}:${DB_PORT:5432}/${DB_NAME:greensoft}
+        url: jdbc:h2:file:${DB_FILE}
 
     oidc:
       auth-server-url: ${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM:green-software}
@@ -158,10 +164,10 @@ carbon:
 
 # =============================================================================
 # Test profile
-# H2 in-memory database in PostgreSQL compatibility mode, no Keycloak. The
-# cloud providers (even if enabled via environment variables) and the
-# scheduler are disabled and the REST clients point to a dummy URL, so tests
-# never call a real cloud API.
+# H2 in-memory instead of file database, so every test run starts empty, and
+# no Keycloak. The cloud providers (even if enabled via environment variables)
+# and the scheduler are disabled and the REST clients point to a dummy URL, so
+# tests never call a real cloud API.
 # =============================================================================
 "%test":
   cloud:
@@ -174,10 +180,8 @@ carbon:
 
   quarkus:
     datasource:
-      db-kind: h2
-      username: sa
       jdbc:
-        url: jdbc:h2:mem:greensoft;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=LAST
+        url: jdbc:h2:mem:greensoft;DB_CLOSE_DELAY=-1
 
     rest-client:
       azure-carbon-api:
@@ -193,14 +197,16 @@ carbon:
 
 # =============================================================================
 # Dev profile
-# Quarkus Dev Services start PostgreSQL and Keycloak in containers (Docker or
-# Podman), as no database or Keycloak URL is configured outside %prod.
+# Quarkus Dev Services start Keycloak in a container (Docker or Podman), as no
+# Keycloak URL is configured outside %prod.
 # =============================================================================
 "%dev":
   quarkus:
+    # H2 database file, kept across restarts. Delete the directory ./data to
+    # start with an empty database. DB_FILE overrides the path like in %prod.
     datasource:
-      devservices:
-        enabled: true
+      jdbc:
+        url: jdbc:h2:file:${DB_FILE:./data/greensoft}
 
     oidc:
       enabled: true
