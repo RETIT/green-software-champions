@@ -2,6 +2,8 @@ package io.retit.greensoftware.service;
 
 import io.retit.greensoftware.config.CarbonHistoryConfig;
 import io.retit.greensoftware.entity.CarbonEntry;
+import io.retit.greensoftware.entity.CloudProject;
+import io.retit.greensoftware.entity.CloudProvider;
 import io.retit.greensoftware.entity.Team;
 import io.retit.greensoftware.util.Periods;
 import io.quarkus.arc.profile.IfBuildProfile;
@@ -13,6 +15,9 @@ import org.jboss.logging.Logger;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
+import java.util.Random;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -35,10 +40,10 @@ public class DevSampleDataService {
     CarbonDataService carbonDataService;
 
     /**
-     * Seeds sample carbon entries for all configured teams and evaluates their
+     * Seeds sample carbon entries for every team in the database and evaluates their
      * achievements like a sync does, so the sample achievements follow the rules.
-     * Must be called after {@link TeamSetupService#initialiseTeams()} so that
-     * {@link Team} records already exist in the database.
+     * Must be called after {@link TeamSetupService#initialiseTeams()} so that the
+     * configured {@link Team} records already exist in the database.
      */
     @Transactional
     public void seedSampleData() {
@@ -46,28 +51,9 @@ public class DevSampleDataService {
         // oldest charted period still has a previous period to compare against.
         List<String> periods = Periods.window(Periods.previous(), historyConfig.months() + 1);
 
-        // -----------------------------------------------------------------------
-        // Carbon entries per team, given as the latest-period values per provider.
-        // Older periods are derived from them: monthlyReduction is the average
-        // relative reduction per month (negative = growing footprint), wiggle the
-        // frequency of the month-to-month noise on top of it.
-        // null = provider not used by that team
-        // -----------------------------------------------------------------------
-        List<SampleTeam> teams = List.of(
-            //             teamName      aws    azure  gcp    monthlyReduction  wiggle
-            new SampleTeam("Team Alpha", 180.2, null,  65.3,  0.025,            1.1),
-            new SampleTeam("Team Beta",   98.4, 90.8,  null, -0.012,            1.7),
-            new SampleTeam("Team Gamma",  null, 42.1,  86.3,  0.045,            2.3),
-            new SampleTeam("Team Delta", 201.3, 112.8, 98.6,  0.008,            0.9)
-        );
-
         int inserted = 0;
-        for (SampleTeam s : teams) {
-            Team team = Team.findByName(s.teamName);
-            if (team == null) {
-                LOG.warnf("Dev sample data: team '%s' not found – run TeamSetupService first.", s.teamName);
-                continue;
-            }
+        for (Team team : Team.<Team>listAll()) {
+            SampleTeam s = SampleTeam.of(team);
 
             for (int i = 0; i < periods.size(); i++) {
                 int monthsAgo = periods.size() - 1 - i;
@@ -77,8 +63,9 @@ public class DevSampleDataService {
                 Double aws   = scale(s.awsLatest, factor);
                 Double azure = scale(s.azureLatest, factor);
                 Double gcp   = scale(s.gcpLatest, factor);
-                double total = Stream.of(aws, azure, gcp).filter(Objects::nonNull)
-                        .mapToDouble(Double::doubleValue).sum();
+                // Null rather than 0 for a team without projects, like a sync stores it
+                Double total = Stream.of(aws, azure, gcp).filter(Objects::nonNull)
+                        .reduce(Double::sum).orElse(null);
 
                 if (CarbonEntry.findByTeamAndPeriod(team, periods.get(i)).isEmpty()) {
                     CarbonEntry entry = new CarbonEntry();
@@ -109,12 +96,44 @@ public class DevSampleDataService {
     // Internal data holder
     // -------------------------------------------------------------------------
 
+    /**
+     * A team's sample data, given as the latest-period values per provider. Older
+     * periods are derived from them: monthlyReduction is the average relative
+     * reduction per month (negative = growing footprint), wiggle the frequency of
+     * the month-to-month noise on top of it. null = provider not used by the team.
+     */
     private record SampleTeam(
-            String teamName,
             // latest period
             Double awsLatest, Double azureLatest, Double gcpLatest,
             // derivation of older periods
             double monthlyReduction, double wiggle
-    ) {}
-}
+    ) {
 
+        /**
+         * Generates the sample data of {@code team}, with values for exactly the
+         * providers it has projects with. The values are random, but seeded with
+         * the team name, so a team gets the same values at every restart and the
+         * periods added in later months continue its existing curve.
+         */
+        static SampleTeam of(Team team) {
+            Set<CloudProvider> providers = CloudProject.findByTeam(team).stream()
+                    .map(p -> p.provider)
+                    .collect(Collectors.toSet());
+            Random random = new Random(team.name.hashCode());
+            // Every value is drawn even for unused providers, so that adding or
+            // removing a project leaves the team's other values unchanged
+            Double aws   = latestCo2Kg(random, providers.contains(CloudProvider.AWS));
+            Double azure = latestCo2Kg(random, providers.contains(CloudProvider.AZURE));
+            Double gcp   = latestCo2Kg(random, providers.contains(CloudProvider.GCP));
+            double monthlyReduction = -0.015 + random.nextDouble() * 0.065; // -1.5 % to 5 %
+            double wiggle = 0.8 + random.nextDouble() * 1.7;                // 0.8 to 2.5
+            return new SampleTeam(aws, azure, gcp, monthlyReduction, wiggle);
+        }
+
+        /** A provider's emissions in the latest period, 40 to 220 kg, or null if unused. */
+        private static Double latestCo2Kg(Random random, boolean used) {
+            double co2Kg = Math.round((40 + random.nextDouble() * 180) * 10) / 10.0;
+            return used ? co2Kg : null;
+        }
+    }
+}

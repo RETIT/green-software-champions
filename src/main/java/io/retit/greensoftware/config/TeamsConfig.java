@@ -2,13 +2,16 @@ package io.retit.greensoftware.config;
 
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithName;
+import jakarta.validation.constraints.Size;
 
 import java.util.List;
 import java.util.Optional;
 
 /**
  * Configuration mapping that defines which teams exist and which cloud projects
- * belong to each team. Configured in application.yaml under the "teams" key.
+ * belong to each team. Configured under the "teams" key of the file named by
+ * quarkus.config.locations in application.yaml: sample-teams.yaml in dev mode
+ * and tests, the file in TEAMS_FILE in production.
  *
  * Example:
  * <pre>
@@ -26,6 +29,11 @@ import java.util.Optional;
 @ConfigMapping(prefix = "teams")
 public interface TeamsConfig {
 
+    /**
+     * At least one team, so the application refuses to start if no teams file
+     * was loaded, e.g. because TEAMS_FILE is not set in production.
+     */
+    @Size(min = 1)
     List<TeamDefinition> definitions();
 
     interface TeamDefinition {
