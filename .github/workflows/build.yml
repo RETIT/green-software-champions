@@ -1,21 +1,21 @@
 # =============================================================================
 # Green Software Champions – CI Build
 # =============================================================================
-# Runs on every push to main/develop and on every pull request.
+# Runs on every push to main and on every pull request, whatever its target
+# branch.
 #
 # Jobs
 # ────
-# test    – unit tests (H2 in-memory, no Docker/Keycloak needed)
-# package – full JAR + frontend build, uploads the runnable artifact
+# test    – unit tests (H2 in-memory, no Docker/Keycloak/Node.js needed)
+# package – backend + frontend build, uploads the uber-jar
 # =============================================================================
 
 name: Build
 
 on:
   push:
-    branches: [ "main", "develop" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "main", "develop" ]
 
 concurrency:
   # Cancel in-progress runs for the same branch/PR (saves CI minutes)
@@ -25,7 +25,9 @@ concurrency:
 jobs:
   # ---------------------------------------------------------------------------
   # Job 1: compile + unit tests
-  # No external services required – the test profile uses H2 in-memory.
+  # No external services required – the %test profile in application.yaml uses
+  # H2 in-memory, no Keycloak, and disables the cloud providers and the
+  # scheduler. The teams come from sample-teams.yaml.
   # ---------------------------------------------------------------------------
   test:
     name: Test (Java ${{ matrix.java }})
@@ -37,31 +39,33 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up JDK ${{ matrix.java }}
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           java-version: ${{ matrix.java }}
           distribution: temurin
           cache: maven          # caches ~/.m2/repository between runs
 
       - name: Run unit tests
-        # %test profile: H2 in-memory, OIDC disabled, Quinoa disabled
-        # No Node.js needed here.
-        run: mvn --batch-mode --no-transfer-progress verify
+        # Stops before the package phase, so the frontend isn't built here
+        # (Quinoa is also disabled in tests) and no Node.js is needed.
+        # The package job builds the frontend.
+        run: mvn --batch-mode --no-transfer-progress test
 
       - name: Upload Surefire reports on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: surefire-reports-jdk${{ matrix.java }}
           path: target/surefire-reports/
           retention-days: 7
 
   # ---------------------------------------------------------------------------
-  # Job 2: full package build (backend JAR + frontend via Quinoa/Vite)
-  # Produces the runnable dev JAR and uploads it as a build artifact.
+  # Job 2: full package build (backend + frontend via Quinoa/Vite)
+  # Produces an uber-jar, a single jar with the application, its libraries and
+  # the frontend, and uploads it as a build artifact.
   # ---------------------------------------------------------------------------
   package:
     name: Package
@@ -70,31 +74,32 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up JDK 25
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           java-version: "25"
           distribution: temurin
           cache: maven
 
-      - name: Set up Node.js 20 (for Quinoa / Vite frontend build)
-        uses: actions/setup-node@v4
+      - name: Set up Node.js 26 (for Quinoa / Vite frontend build)
+        uses: actions/setup-node@v7
         with:
-          node-version: "20"
+          node-version: "26" # LTS
           cache: npm
           cache-dependency-path: src/main/webui/package-lock.json
 
-      - name: Build JAR (skip tests – already run in the test job)
-        run: mvn --batch-mode --no-transfer-progress package -DskipTests
+      - name: Build application (skip tests – already run in the test job)
+        # Uber-jar (packaging into one single jar) only in CI
+        # a local mvn package still builds the fast-jar
+        run: mvn --batch-mode --no-transfer-progress package -DskipTests -Dquarkus.package.jar.type=uber-jar
 
-      - name: Upload runnable JAR
-        uses: actions/upload-artifact@v4
+      - name: Upload application
+        uses: actions/upload-artifact@v7
         with:
-          name: green-software-champions-dev
-          # Quinoa unpacks the frontend into the JAR; grab the dev JAR
-          path: target/green-software-champions-dev.jar
+          name: green-software-champions
+          # Run with java -jar green-software-champions-<version>-runner.jar
+          path: target/*-runner.jar
           retention-days: 30
-          if-no-files-found: warn
-
+          if-no-files-found: error
