@@ -1,0 +1,61 @@
+# =============================================================================
+# Sample teams and their cloud projects – dev mode and tests only
+#
+# Loaded via quarkus.config.locations in application.yaml. In production, the
+# teams are read from the file named by TEAMS_FILE instead, which has the same
+# structure.
+# Created or updated in the database at every startup; teams and projects
+# removed here are not deleted from it. The tests refer to these teams by name.
+# =============================================================================
+teams:
+  definitions:
+    - name: "Team Alpha"
+      description: "Frontend development team"
+      color: "#4CAF50"
+      icon: "🌱"
+      projects:
+        - provider: AWS
+          project-id: "${ALPHA_AWS_PROJECT:123456789012}"
+          project-name: "Alpha AWS Account"
+        - provider: GCP
+          project-id: "${ALPHA_GCP_PROJECT:alpha-project-gcp}"
+          project-name: "Alpha GCP Project"
+
+    - name: "Team Beta"
+      description: "Backend development team"
+      color: "#2196F3"
+      icon: "💧"
+      projects:
+        - provider: AZURE
+          project-id: "${BETA_AZURE_PROJECT:/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/beta-rg}"
+          project-name: "Beta Azure Resource Group"
+        - provider: AWS
+          project-id: "${BETA_AWS_PROJECT:234567890123}"
+          project-name: "Beta AWS Account"
+
+    - name: "Team Gamma"
+      description: "Data engineering team"
+      color: "#FF9800"
+      icon: "⚡"
+      projects:
+        - provider: GCP
+          project-id: "${GAMMA_GCP_PROJECT:gamma-data-project}"
+          project-name: "Gamma GCP Data Project"
+        - provider: AZURE
+          project-id: "${GAMMA_AZURE_PROJECT:/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/gamma-rg}"
+          project-name: "Gamma Azure Resource Group"
+
+    - name: "Team Delta"
+      description: "Platform engineering team"
+      color: "#9C27B0"
+      icon: "🚀"
+      projects:
+        - provider: AWS
+          project-id: "${DELTA_AWS_PROJECT:345678901234}"
+          project-name: "Delta AWS Account"
+        - provider: GCP
+          project-id: "${DELTA_GCP_PROJECT:delta-platform-project}"
+          project-name: "Delta GCP Platform"
+        - provider: AZURE
+          project-id: "${DELTA_AZURE_PROJECT:/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/delta-rg}"
+          project-name: "Delta Azure Resource Group"
