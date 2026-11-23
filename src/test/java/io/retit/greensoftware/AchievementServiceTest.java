@@ -19,9 +19,6 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Tests for the AchievementService rule engine.
- */
 @QuarkusTest
 class AchievementServiceTest {
 
@@ -38,10 +35,6 @@ class AchievementServiceTest {
         Achievement.deleteAll();
         CarbonEntry.deleteAll();
     }
-
-    // -------------------------------------------------------------------------
-    // Reduction Champion
-    // -------------------------------------------------------------------------
 
     @Test
     @Transactional
@@ -92,10 +85,6 @@ class AchievementServiceTest {
         assertEquals(1, achievementsOf(beta, AchievementType.HIGHEST_REDUCTION).size());
     }
 
-    // -------------------------------------------------------------------------
-    // Most CO2e Saved
-    // -------------------------------------------------------------------------
-
     @Test
     @Transactional
     void mostCo2Saved_grantedToTheTeamThatSavedTheMostInKg() {
@@ -115,10 +104,6 @@ class AchievementServiceTest {
         assertEquals(1, achievementsOf(alpha, AchievementType.HIGHEST_REDUCTION).size(),
                 TEAM_ALPHA + " should still be the Reduction Champion");
     }
-
-    // -------------------------------------------------------------------------
-    // Big Saver
-    // -------------------------------------------------------------------------
 
     @Test
     @Transactional
@@ -174,10 +159,6 @@ class AchievementServiceTest {
         assertTrue(achievementsOf(alpha, AchievementType.BIG_SAVER).isEmpty(),
                 "A reduction due to the shorter month should not count");
     }
-
-    // -------------------------------------------------------------------------
-    // Green Streak
-    // -------------------------------------------------------------------------
 
     @Test
     @Transactional
@@ -261,10 +242,6 @@ class AchievementServiceTest {
                 "Reductions after the evaluated period should not count");
     }
 
-    // -------------------------------------------------------------------------
-    // Personal Best
-    // -------------------------------------------------------------------------
-
     @Test
     @Transactional
     void personalBest_grantedForTheLowestDailyAverageSinceTrackingBegan() {
@@ -301,10 +278,6 @@ class AchievementServiceTest {
         assertTrue(achievementsOf(alpha, AchievementType.PERSONAL_BEST).isEmpty(),
                 "3% below the previous best should not count");
     }
-
-    // -------------------------------------------------------------------------
-    // Annual Improver
-    // -------------------------------------------------------------------------
 
     @Test
     @Transactional
@@ -350,10 +323,6 @@ class AchievementServiceTest {
                 "Years should only be compared once they ended");
     }
 
-    // -------------------------------------------------------------------------
-    // General
-    // -------------------------------------------------------------------------
-
     @Test
     @Transactional
     void evaluateAchievements_doesNotDuplicateAchievements() {
@@ -393,10 +362,6 @@ class AchievementServiceTest {
         assertTrue(Achievement.findByTeam(gamma).isEmpty(), "Missing data should not count as a reduction");
         assertFalse(Achievement.findByTeam(alpha).isEmpty(), "The other teams should still be evaluated");
     }
-
-    // -------------------------------------------------------------------------
-    // Criteria
-    // -------------------------------------------------------------------------
 
     @Test
     void criteria_describesEveryRuleBasedTypeWithItsThresholds() {
@@ -454,10 +419,6 @@ class AchievementServiceTest {
                 "A custom achievement should be awarded in the current period");
     }
 
-    // -------------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------------
-
     /** Evaluates every period from {@code first} to {@code last}, oldest first, like a sync. */
     private void evaluate(String first, String last) {
         for (YearMonth month = Periods.toYearMonth(first);
@@ -498,7 +459,6 @@ class AchievementServiceTest {
         }
     }
 
-    /** Creates entries for every month of {@code year} with the same daily average. */
     private void createYear(Team team, int year, double co2KgPerDay) {
         double[] months = new double[12];
         Arrays.fill(months, co2KgPerDay);

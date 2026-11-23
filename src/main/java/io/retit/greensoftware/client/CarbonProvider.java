@@ -9,46 +9,28 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
-/**
- * Common interface for all cloud provider carbon footprint data providers.
- * Each cloud provider implementation fetches carbon emission data for the
- * given projects and range of reporting periods.
- */
+/** Fetches the carbon emissions of one cloud provider's projects. */
 public interface CarbonProvider {
 
-    /**
-     * Result record holding carbon footprint data for a single cloud project.
-     *
-     * @param projectId  The cloud project identifier.
-     * @param co2Kg      Total CO2-equivalent emissions in kg.
-     */
     record CarbonData(String projectId, double co2Kg) {}
 
     /**
-     * Fetch carbon footprint data for the specified projects in every period of the range.
+     * Fetches the emissions of {@code projects}, all of this provider, in each period of
+     * {@code range}.
      *
-     * @param projects Cloud projects to fetch data for (all must belong to this provider).
-     * @param range    Reporting periods to fetch.
-     * @return The carbon data records by period (YYYY-MM), one per project. A period is
-     *         missing if the data of any project could not be fetched or has not been
-     *         published yet; partial results of a period are never returned.
-     * @throws CarbonDataUnavailableException if the data could not be fetched at all,
-     *         e.g., because the API is unreachable.
+     * @return one entry per project by period (YYYY-MM). A period is left out unless
+     *         every project's data could be fetched and has been published.
+     * @throws CarbonDataUnavailableException if nothing could be fetched, e.g. because
+     *         the API is unreachable
      */
     Map<String, List<CarbonData>> fetchCarbonData(List<CloudProject> projects, PeriodRange range);
 
-    /**
-     * Check whether this provider is enabled in the current configuration.
-     */
     boolean isEnabled();
 
     /**
-     * Implements {@link #fetchCarbonData(List, PeriodRange)} for APIs that return one
-     * period per request, by calling {@code fetchPeriod} for each period of
-     * {@code range}. A period whose fetch throws {@link CarbonDataUnavailableException}
-     * is left out, so that it does not cost the other periods their data.
-     *
-     * @param fetchPeriod Fetches the data of all projects in the given period.
+     * Implements {@link #fetchCarbonData} for APIs that return one period per request. A
+     * period whose {@code fetchPeriod} throws {@link CarbonDataUnavailableException} is
+     * left out without costing the other periods their data.
      */
     static Map<String, List<CarbonData>> fetchEachPeriod(PeriodRange range,
                                                          Function<String, List<CarbonData>> fetchPeriod) {

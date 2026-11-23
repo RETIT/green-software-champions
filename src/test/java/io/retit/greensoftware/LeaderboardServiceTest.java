@@ -19,10 +19,6 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Unit tests for the LeaderboardService.
- * Uses an H2 in-memory database and disables OIDC + Quinoa for fast testing.
- */
 @QuarkusTest
 class LeaderboardServiceTest {
 
@@ -36,7 +32,6 @@ class LeaderboardServiceTest {
     @BeforeEach
     @Transactional
     void setUp() {
-        // Clean up any leftover data
         Achievement.deleteAll();
         CarbonEntry.deleteAll();
     }
@@ -44,7 +39,6 @@ class LeaderboardServiceTest {
     @Test
     void getLeaderboard_returnsAllTeams_evenWithoutCarbonData() {
         var entries = leaderboardService.getLeaderboard("2024-01");
-        // Teams are seeded by TeamSetupService on startup from application.yaml
         assertNotNull(entries);
         assertFalse(entries.isEmpty(), "Expected at least one team in the leaderboard");
     }
@@ -52,7 +46,6 @@ class LeaderboardServiceTest {
     @Test
     @Transactional
     void getLeaderboard_ranksTeamsByLowestCo2() {
-        // Insert carbon data: Team Alpha has less CO2 than Team Beta
         Team alpha = Team.findByName(TEAM_ALPHA);
         Team beta = Team.findByName(TEAM_BETA);
         assertNotNull(alpha, TEAM_ALPHA + " should exist");
@@ -63,7 +56,6 @@ class LeaderboardServiceTest {
 
         var leaderboard = leaderboardService.getLeaderboard("2024-06");
 
-        // Find alpha and beta entries in the result (there may be more teams from YAML config)
         var alphaEntry = leaderboard.stream().filter(e -> TEAM_ALPHA.equals(e.teamName)).findFirst().orElse(null);
         var betaEntry = leaderboard.stream().filter(e -> TEAM_BETA.equals(e.teamName)).findFirst().orElse(null);
         assertNotNull(alphaEntry, TEAM_ALPHA + " should be in leaderboard");
@@ -87,8 +79,7 @@ class LeaderboardServiceTest {
         var alphaEntry = leaderboard.stream().filter(e -> TEAM_ALPHA.equals(e.teamName)).findFirst().orElseThrow();
         var betaEntry = leaderboard.stream().filter(e -> TEAM_BETA.equals(e.teamName)).findFirst().orElseThrow();
 
-        // Company total is the sum of all teams with data for this period
-        // (only alpha and beta have data, so total = 4000)
+        // Only Alpha and Beta have data
         assertNotNull(alphaEntry.companySharePercent);
         assertNotNull(betaEntry.companySharePercent);
         assertEquals(25.0, alphaEntry.companySharePercent, 0.01,
@@ -371,7 +362,6 @@ class LeaderboardServiceTest {
         var teams = leaderboardService.getAllTeams();
         assertNotNull(teams);
         assertFalse(teams.isEmpty());
-        // The teams from application.yaml should be present
         assertTrue(teams.stream().anyMatch(t -> TEAM_ALPHA.equals(t.name)),
                 TEAM_ALPHA + " should exist");
     }
@@ -385,10 +375,6 @@ class LeaderboardServiceTest {
         assertNotNull(alpha.projects);
         assertFalse(alpha.projects.isEmpty(), TEAM_ALPHA + " should have cloud projects");
     }
-
-    // -------------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------------
 
     private static LeaderboardEntryDto findEntry(List<LeaderboardEntryDto> leaderboard, String teamName) {
         return leaderboard.stream()

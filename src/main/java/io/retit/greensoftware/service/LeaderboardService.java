@@ -21,20 +21,12 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/**
- * Assembles leaderboard data by combining team, carbon entry, and achievement
- * records and computing rankings and relative metrics.
- */
 @ApplicationScoped
 public class LeaderboardService {
 
     @Inject
     CarbonHistoryConfig historyConfig;
 
-    /**
-     * Returns the leaderboard for the given period. If {@code period} is null or
-     * empty, the latest period with data for every team is used.
-     */
     @Transactional
     public List<LeaderboardEntryDto> getLeaderboard(String period) {
         String resolvedPeriod = resolvePeriod(period);
@@ -52,7 +44,7 @@ public class LeaderboardService {
                 .mapToDouble(e -> e.totalCo2Kg)
                 .sum();
 
-        // Sort by total CO2 ascending (lower is better)
+        // Lowest emissions rank first
         entries.sort(Comparator.comparingDouble(e -> e.totalCo2Kg != null ? e.totalCo2Kg : Double.MAX_VALUE));
 
         List<LeaderboardEntryDto> result = new ArrayList<>();
@@ -80,7 +72,7 @@ public class LeaderboardService {
             result.add(dto);
         }
 
-        // Teams with no data for this period (still show them at the bottom)
+        // Teams without data for this period, at the bottom
         Set<Long> rankedIds = entries.stream().map(e -> e.team.id).collect(Collectors.toSet());
         List<Team> allTeams = Team.listAll();
         for (Team team : allTeams) {
@@ -100,10 +92,6 @@ public class LeaderboardService {
         return result;
     }
 
-    /**
-     * Returns a company-wide carbon summary for the given period, defaulting like
-     * {@link #getLeaderboard(String)}.
-     */
     @Transactional
     public CarbonSummaryDto getCompanySummary(String period) {
         String resolvedPeriod = resolvePeriod(period);
@@ -135,7 +123,6 @@ public class LeaderboardService {
         return dto;
     }
 
-    /** Returns a list of all teams with their cloud project assignments. */
     @Transactional
     public List<TeamDto> getAllTeams() {
         return Team.<Team>listAll().stream()
@@ -144,11 +131,9 @@ public class LeaderboardService {
     }
 
     /**
-     * Returns {@code period}, or if it is null or empty, the latest period of the
-     * history window that every team has data for. Providers publish a month's
-     * data only weeks after it ended, so the previous month is not necessarily synced
-     * yet. The current month is never complete and is skipped, and the previous month
-     * is the fallback without data.
+     * {@code period}, or if blank, the latest period of the history window every team has
+     * data for, as the providers publish a month only weeks after it ended. Falls back to
+     * the previous month.
      */
     private String resolvePeriod(String period) {
         if (period != null && !period.isBlank()) {
@@ -161,11 +146,9 @@ public class LeaderboardService {
     }
 
     /**
-     * The periods of the history charts for {@code endPeriod}, oldest first: up to
-     * {@code carbon.history.months} periods ending at it, but none before the earliest
-     * synced period, as the stored history only grows by one month per sync. The
-     * window is the same for all teams, so their charts line up. Empty if nothing
-     * has been synced up to {@code endPeriod}.
+     * The periods of the history charts, oldest first: up to {@code carbon.history.months}
+     * ending with {@code endPeriod}, but none before the earliest synced period. The same
+     * for all teams, so their charts line up.
      */
     private List<String> historyWindow(String endPeriod) {
         return CarbonEntry.findEarliestPeriod()
@@ -235,10 +218,9 @@ public class LeaderboardService {
     }
 
     /**
-     * The achievements of each team as of {@code period}, latest first, keyed by team
-     * id: those awarded for {@code period} or earlier. When showing the latest period
-     * every team has data for (the default), all achievements are included, so that
-     * e.g. a custom achievement granted in the current month is shown as well.
+     * Each team's achievements awarded up to {@code period}, latest first. From the
+     * default period on, all are included, so that e.g. a custom achievement of the
+     * current month is shown too.
      */
     private Map<Long, List<AchievementDto>> findAchievementsByTeam(String period) {
         // YYYY-MM strings sort chronologically

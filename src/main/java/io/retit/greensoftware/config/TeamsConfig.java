@@ -8,31 +8,13 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Configuration mapping that defines which teams exist and which cloud projects
- * belong to each team. Configured under the "teams" key of the file named by
- * quarkus.config.locations in application.yaml: sample-teams.yaml in dev mode
- * and tests, the file in TEAMS_FILE in production.
- *
- * Example:
- * <pre>
- * teams:
- *   definitions:
- *     - name: "Team Alpha"
- *       color: "#4CAF50"
- *       icon: "🌱"
- *       projects:
- *         - provider: AWS
- *           project-id: "123456789012"
- *           project-name: "alpha-prod"
- * </pre>
+ * The teams and their cloud projects, from the file named by
+ * {@code quarkus.config.locations}, e.g. sample-teams.yaml.
  */
 @ConfigMapping(prefix = "teams")
 public interface TeamsConfig {
 
-    /**
-     * At least one team, so the application refuses to start if no teams file
-     * was loaded, e.g. because TEAMS_FILE is not set in production.
-     */
+    /** At least one, so the application refuses to start without a teams file. */
     @Size(min = 1)
     List<TeamDefinition> definitions();
 
@@ -52,11 +34,10 @@ public interface TeamsConfig {
         /** Cloud provider: AWS, AZURE, or GCP. */
         String provider();
 
-        /** The cloud provider's project/account/subscription identifier. */
+        /** AWS account ID, Azure subscription or resource group path, or GCP project ID. */
         @WithName("project-id")
         String projectId();
 
-        /** Human-readable name for the project. */
         @WithName("project-name")
         Optional<String> projectName();
     }

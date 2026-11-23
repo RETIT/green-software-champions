@@ -10,9 +10,8 @@ import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
 
 /**
- * Initialises the team and project configuration from {@link TeamsConfig} into the
- * relational database on application startup. Existing records are updated to match
- * the configuration; records not present in the config are left unchanged.
+ * Creates or updates the teams and projects of {@link TeamsConfig} in the database.
+ * Teams and projects removed from the configuration are kept.
  */
 @ApplicationScoped
 public class TeamSetupService {
@@ -22,10 +21,6 @@ public class TeamSetupService {
     @Inject
     TeamsConfig teamsConfig;
 
-    /**
-     * Synchronises the team definitions from configuration into the database.
-     * Idempotent: safe to call on every startup.
-     */
     @Transactional
     public void initialiseTeams() {
         LOG.info("Initialising teams from configuration...");

@@ -20,13 +20,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-/**
- * Inserts realistic sample carbon data in dev mode so the UI is immediately useful
- * without requiring live cloud-provider API credentials.
- *
- * Only active when the "dev" build profile is selected ({@code mvn quarkus:dev}).
- * Idempotent: already-existing entries are skipped on every restart.
- */
+/** Seeds sample carbon data in dev mode, so the UI is useful without cloud credentials. */
 @ApplicationScoped
 @IfBuildProfile("dev")
 public class DevSampleDataService {
@@ -40,15 +34,12 @@ public class DevSampleDataService {
     CarbonDataService carbonDataService;
 
     /**
-     * Seeds sample carbon entries for every team in the database and evaluates their
-     * achievements like a sync does, so the sample achievements follow the rules.
-     * Must be called after {@link TeamSetupService#initialiseTeams()} so that the
-     * configured {@link Team} records already exist in the database.
+     * Seeds the missing entries of every team and evaluates their achievements like a
+     * sync. Requires the teams to exist, see {@link TeamSetupService#initialiseTeams()}.
      */
     @Transactional
     public void seedSampleData() {
-        // The history window the charts show, plus one period more so the
-        // oldest charted period still has a previous period to compare against.
+        // One more than charted, so the oldest charted period has a predecessor
         List<String> periods = Periods.window(Periods.previous(), historyConfig.months() + 1);
 
         int inserted = 0;
@@ -92,36 +83,26 @@ public class DevSampleDataService {
         return value == null ? null : Math.round(value * factor * 10) / 10.0;
     }
 
-    // -------------------------------------------------------------------------
-    // Internal data holder
-    // -------------------------------------------------------------------------
-
     /**
-     * A team's sample data, given as the latest-period values per provider. Older
-     * periods are derived from them: monthlyReduction is the average relative
-     * reduction per month (negative = growing footprint), wiggle the frequency of
-     * the month-to-month noise on top of it. null = provider not used by the team.
+     * A team's emissions per provider in the latest period (null if unused), from which
+     * the older periods are derived: {@code monthlyReduction} is the average reduction
+     * per month (negative = growing), {@code wiggle} the frequency of the noise on top.
      */
     private record SampleTeam(
-            // latest period
             Double awsLatest, Double azureLatest, Double gcpLatest,
-            // derivation of older periods
             double monthlyReduction, double wiggle
     ) {
 
         /**
-         * Generates the sample data of {@code team}, with values for exactly the
-         * providers it has projects with. The values are random, but seeded with
-         * the team name, so a team gets the same values at every restart and the
-         * periods added in later months continue its existing curve.
+         * Random, but seeded with the team name, so that a team gets the same values at
+         * every restart and later months continue its curve.
          */
         static SampleTeam of(Team team) {
             Set<CloudProvider> providers = CloudProject.findByTeam(team).stream()
                     .map(p -> p.provider)
                     .collect(Collectors.toSet());
             Random random = new Random(team.name.hashCode());
-            // Every value is drawn even for unused providers, so that adding or
-            // removing a project leaves the team's other values unchanged
+            // Drawn even for unused providers, so adding a project leaves the other values unchanged
             Double aws   = latestCo2Kg(random, providers.contains(CloudProvider.AWS));
             Double azure = latestCo2Kg(random, providers.contains(CloudProvider.AZURE));
             Double gcp   = latestCo2Kg(random, providers.contains(CloudProvider.GCP));

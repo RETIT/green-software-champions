@@ -107,11 +107,7 @@ class SecurityTest {
                 .then().statusCode(403);
     }
 
-    /**
-     * With the roles in the claim of each kind of identity provider, so that a change
-     * of the configuration that makes the application read the roles of only one
-     * kind fails. Includes Keycloak's own default roles, which are left out.
-     */
+    /** Covers each identity provider's role claim, and Keycloak's default roles, which are left out. */
     @ParameterizedTest
     @EnumSource(RoleClaim.class)
     void me_withToken_returnsNameAndApplicationRoles(RoleClaim roleClaim) {
@@ -124,11 +120,7 @@ class SecurityTest {
                 .body("roles", containsInAnyOrder("user", "admin"));
     }
 
-    /**
-     * Unlike the leaderboard, /api/me only requires a login, so that the frontend can
-     * show a user without access their name and the logout link, to log in as
-     * someone else.
-     */
+    /** So that users without access see their name and the logout link, to log in as someone else. */
     @Test
     void me_withTokenWithoutUserRole_isAllowed() {
         given().auth().oauth2(accessToken("bob", Set.of()))
@@ -152,11 +144,7 @@ class SecurityTest {
                 .then().statusCode(202);
     }
 
-    /**
-     * What a script gets once its token has expired: Keycloak's access tokens are
-     * only valid for 5 minutes by default. A 401, unlike the redirect to the login
-     * a request without any token gets, makes e.g. {@code curl -f} fail.
-     */
+    /** A 401 rather than a redirect to the login, so that e.g. {@code curl -f} fails. */
     @Test
     void adminApi_withExpiredTokenOfAdmin_isUnauthorized() {
         Instant issuedAt = Instant.now().minus(Duration.ofHours(1));
@@ -173,8 +161,7 @@ class SecurityTest {
 
     @Test
     void adminApi_withTamperedTokenOfUser_isUnauthorized() {
-        // A user's token with the claims of one with the role "admin", so that the
-        // signature no longer matches the claims
+        // The user's signature with an admin's claims
         String[] userToken = accessToken("alice", Set.of("user")).split("\\.");
         String adminClaims = accessToken("alice", Set.of("user", "admin")).split("\\.")[1];
         String tampered = userToken[0] + "." + adminClaims + "." + userToken[2];
@@ -209,9 +196,8 @@ class SecurityTest {
             assertTrue(JsonPath.from(me.getContentAsString()).getList("roles").contains("admin"),
                     me.getContentAsString());
 
-            // E.g. a form of another website, posting with the admin's session cookie:
+            // Like another website's form posting with the admin's session cookie (CSRF):
             // the session does not count here, so the request is sent to the login
-            // instead of reaching the endpoint
             webClient.getOptions().setRedirectEnabled(false);
             WebResponse response = webClient.loadWebResponse(new WebRequest(syncUrl, HttpMethod.POST));
             assertEquals(302, response.getStatusCode());
@@ -239,23 +225,16 @@ class SecurityTest {
     // Helpers
     // -------------------------------------------------------------------------
 
-    /**
-     * An access token of the fake OIDC server for {@code userName} with {@code roles}
-     * in the claim {@code groups}.
-     */
+    /** An access token of the fake OIDC server, with the roles in the claim {@code groups}. */
     private static String accessToken(String userName, Set<String> roles) {
         return claims(userName, roles).sign();
     }
 
-    /** {@link #claims(String, Set, RoleClaim)} with the roles in the claim {@code groups}. */
     private static JwtClaimsBuilder claims(String userName, Set<String> roles) {
         return claims(userName, roles, RoleClaim.GROUPS);
     }
 
-    /**
-     * The claims of an access token of the fake OIDC server, to be signed with
-     * {@link JwtClaimsBuilder#sign()}, which uses the server's key.
-     */
+    /** To be signed with {@link JwtClaimsBuilder#sign()}, which uses the fake OIDC server's key. */
     private static JwtClaimsBuilder claims(String userName, Set<String> roles, RoleClaim roleClaim) {
         return roleClaim.add(Jwt.preferredUserName(userName), roles)
                 .issuer("https://server.example.com")
@@ -264,21 +243,19 @@ class SecurityTest {
 
     /** Where an identity provider puts the user's roles in its tokens. */
     enum RoleClaim {
-        /** Keycloak: its realm roles, in realm_access.roles. */
         KEYCLOAK {
             @Override
             JwtClaimsBuilder add(JwtClaimsBuilder claims, Set<String> roles) {
                 return claims.claim("realm_access", Map.of("roles", List.copyOf(roles)));
             }
         },
-        /** The claim of MicroProfile JWT, which e.g. Okta and authentik use. */
+        /** MicroProfile JWT's claim, used e.g. by Okta and authentik. */
         GROUPS {
             @Override
             JwtClaimsBuilder add(JwtClaimsBuilder claims, Set<String> roles) {
                 return claims.groups(roles);
             }
         },
-        /** Microsoft Entra ID: its app roles, in roles. */
         ENTRA_ID {
             @Override
             JwtClaimsBuilder add(JwtClaimsBuilder claims, Set<String> roles) {
@@ -297,9 +274,8 @@ class SecurityTest {
     }
 
     /**
-     * Opens /api/me like a browser, which redirects to the login form of the fake OIDC
-     * server, logs in as {@code userName} (the password is the user name) and returns
-     * the page Quarkus redirects back to.
+     * Opens /api/me, logs in at the fake OIDC server's form as {@code userName} (the
+     * password is the user name) and returns the page Quarkus redirects back to.
      */
     private Page logIn(WebClient webClient, String userName) throws IOException {
         HtmlPage loginPage = webClient.getPage(meUrl);

@@ -5,10 +5,6 @@ import type { LeaderboardEntry } from "../types.ts";
 import { formatPeriod } from "../util/format.ts";
 import "./gsc-team-card.ts";
 
-/**
- * Leaderboard component that displays all teams ranked by their
- * carbon footprint with reduction metrics and achievements.
- */
 @customElement("gsc-leaderboard")
 export class GscLeaderboard extends LitElement {
   @property({ type: Array }) entries: LeaderboardEntry[] = [];

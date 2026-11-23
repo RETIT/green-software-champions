@@ -59,7 +59,6 @@ export interface LeaderboardSummary {
   history: HistoryPoint[];
 }
 
-/** The logged-in user. */
 export interface User {
   /** Null if nobody is logged in, which only happens in dev mode. */
   name: string | null;

@@ -31,10 +31,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Tests for the carbon data sync of the CarbonDataService.
- * AWS is replaced by a fake provider; Azure and GCP stay disabled.
- */
+/** AWS is replaced by {@link FakeAwsProvider}; Azure and GCP stay disabled. */
 @QuarkusTest
 class CarbonDataServiceTest {
 
@@ -47,7 +44,7 @@ class CarbonDataServiceTest {
     private static final String TEAM_ALPHA = "Team Alpha";
     private static final String TEAM_BETA = "Team Beta";
     private static final String TEAM_GAMMA = "Team Gamma";
-    /** Team Beta's AWS account from application.yaml. */
+    /** Team Beta's AWS account in sample-teams.yaml. */
     private static final String BETA_AWS_PROJECT = "234567890123";
 
     private FakeAwsProvider aws;
@@ -255,8 +252,7 @@ class CarbonDataServiceTest {
 
     @Test
     void syncForPeriod_skipsAchievementsWhileThePeriodIsIncomplete() {
-        // AWS has not published Beta's account yet, so Beta gets no entry, while the
-        // other teams have data that would be awarded (Alpha's reduction)
+        // Beta gets no entry, while Alpha's reduction would be awarded
         createAlphaReduction();
         aws.failingProjectIds.add(BETA_AWS_PROJECT);
 
@@ -283,14 +279,7 @@ class CarbonDataServiceTest {
                         "Achievements should be evaluated once the period is complete"));
     }
 
-    // -------------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------------
-
-    /**
-     * Makes the sync of {@link #period} a reduction for Alpha, which is awarded once the
-     * period is evaluated: 100 kg CO2e from AWS, after 200 kg in the previous period.
-     */
+    /** Makes {@link #period} a reduction for Alpha, from 200 to 100 kg, which is awarded once evaluated. */
     private void createAlphaReduction() {
         aws.co2KgByPeriod.put(period, 100.0);
         QuarkusTransaction.requiringNew().run(() ->
@@ -307,11 +296,9 @@ class CarbonDataServiceTest {
     }
 
     /**
-     * Returns the configured CO2 per period for every project, 0 for unknown periods.
-     * Leaves out the periods in {@link #failingPeriods} like unpublished data, and fails
-     * like an unreachable API for the projects in {@link #failingProjectIds}. Records
-     * the range of every call in {@link #fetchedRanges}, and in
-     * {@link #fetchedInTransaction} whether any call ran in a transaction.
+     * Returns {@link #co2KgByPeriod} for every project, 0 for other periods. Leaves out
+     * {@link #failingPeriods} like unpublished data and fails like an unreachable API
+     * for {@link #failingProjectIds}.
      */
     static class FakeAwsProvider extends AwsCarbonProvider {
 

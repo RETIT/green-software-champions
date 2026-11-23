@@ -5,10 +5,8 @@ import { formatCo2, formatPercent, formatPeriod } from "./format.ts";
 const MAX_TOOLTIP_ACHIEVEMENTS = 12;
 
 /**
- * Groups achievements of the same kind, so that one awarded several times can be
- * shown once with a count. Custom achievements are grouped by title and icon, as
- * they share a type. With achievements given latest first, as the API returns
- * them, each group is latest first and the most recently earned group comes first.
+ * Groups achievements of the same kind, custom ones by title and icon. Given latest
+ * first, as the API returns them, the groups and their achievements are latest first.
  */
 export function groupAchievements(
   achievements: Achievement[],
@@ -37,10 +35,9 @@ function tierNumeral(tier: number): string {
 }
 
 /**
- * What a group's badge shows besides its title. For achievements with tiers, the
- * highest tier reached as a Roman numeral and how often it was reached, as the lower
- * tiers are earned on the way to it, e.g. a 12-month streak also earns tiers I and
- * II. Otherwise no tier and how often the achievement was awarded.
+ * What a group's badge shows besides its title: the highest tier and how often it was
+ * reached, as the lower ones are earned on the way, or without tiers, how often the
+ * achievement was awarded.
  */
 export function groupBadge(group: Achievement[]): {
   tier: string | null;
@@ -56,10 +53,7 @@ export function groupBadge(group: Achievement[]): {
     : { tier: null, count: group.length };
 }
 
-/**
- * The title of a group, with its highest tier if it has tiers, and how often that
- * was reached or the achievement was awarded if more than once.
- */
+/** The title with the badge's tier and count, e.g. "Green Streak II ×2". */
 export function groupLabel(group: Achievement[]): string {
   const { tier, count } = groupBadge(group);
   return [group[0].title, tier, count > 1 ? `×${count}` : null]
@@ -67,10 +61,7 @@ export function groupLabel(group: Achievement[]): string {
     .join(" ");
 }
 
-/**
- * The value an achievement was awarded for, in short, as its criteria already say
- * what it means, or null if it has none, e.g. one granted before values were stored.
- */
+/** The value awarded for, in short, as the criteria explain it; null if none. */
 function awardValue(a: Achievement): string | null {
   const value = a.measuredValue;
   const hasValue = Number.isFinite(value);
@@ -93,10 +84,7 @@ function awardValue(a: Achievement): string | null {
   }
 }
 
-/**
- * What an achievement was awarded for: its tier, if it has one, and its value, or
- * its description if it has no value.
- */
+/** The tier, if any, and the value, or the description without a value. */
 function awardDetail(a: Achievement): string | null {
   const value = awardValue(a) ?? a.description;
   if (!a.tier) return value;
@@ -112,9 +100,9 @@ function awardPeriod(a: Achievement): string {
 }
 
 /**
- * A tooltip for a group: its label and what its achievements are awarded for, then
- * when each one was awarded and its value. Custom achievements have no criteria, so
- * their description is shown once if they all share it, otherwise per achievement.
+ * The group's label and criteria, then each award's period and value. Custom
+ * achievements have no criteria, so their description is shown once if shared,
+ * otherwise per award.
  */
 export function groupTooltip(group: Achievement[]): string {
   const { criteria, description } = group[0];

@@ -13,25 +13,20 @@ public final class Periods {
     private Periods() {
     }
 
-    /** The current calendar month. */
     public static String current() {
         return YearMonth.now().toString();
     }
 
-    /** The calendar month before the current one, i.e. the latest complete month. */
+    /** The latest complete month. */
     public static String previous() {
         return previous(current());
     }
 
-    /** The calendar month before {@code period}. */
     public static String previous(String period) {
         return toYearMonth(period).minusMonths(1).toString();
     }
 
-    /**
-     * The {@code months} consecutive periods ending at (and including) {@code endPeriod},
-     * ordered oldest first.
-     */
+    /** The {@code months} periods up to and including {@code endPeriod}, oldest first. */
     public static List<String> window(String endPeriod, int months) {
         YearMonth end = toYearMonth(endPeriod);
         List<String> periods = new ArrayList<>(months);
@@ -41,12 +36,10 @@ public final class Periods {
         return periods;
     }
 
-    /** The number of days in {@code period}. */
     public static int lengthInDays(String period) {
         return toYearMonth(period).lengthOfMonth();
     }
 
-    /** Parses {@code period} into a {@link YearMonth}. */
     public static YearMonth toYearMonth(String period) {
         return YearMonth.parse(period);
     }

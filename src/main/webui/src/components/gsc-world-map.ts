@@ -23,9 +23,6 @@ interface Tooltip extends Point {
   entry: LeaderboardEntry | null;
 }
 
-/**
- * World map visualization component.
- */
 @customElement("gsc-world-map")
 export class GscWorldMap extends LitElement {
   @property({ type: Array }) entries: LeaderboardEntry[] = [];
@@ -254,7 +251,6 @@ export class GscWorldMap extends LitElement {
       display: block;
     }
 
-    /* Map colors aligned to RETIT light theme */
     .land {
       fill: var(--retit-map-land);
       stroke: color-mix(
@@ -325,7 +321,6 @@ export class GscWorldMap extends LitElement {
       animation: pulse-ring 2.5s ease-out infinite;
     }
 
-    /* Legend */
     .legend {
       display: flex;
       gap: 1.5em;
@@ -363,7 +358,6 @@ export class GscWorldMap extends LitElement {
       height: 26px;
     }
 
-    /* Tooltip */
     .tooltip {
       position: absolute;
       background: var(--retit-surface);

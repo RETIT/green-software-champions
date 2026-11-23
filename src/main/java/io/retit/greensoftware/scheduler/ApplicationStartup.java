@@ -11,11 +11,6 @@ import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
-/**
- * Handles application startup events: initialises teams from configuration
- * and runs an initial carbon data sync, or, in dev mode without any enabled
- * cloud provider, seeds sample data instead.
- */
 @ApplicationScoped
 public class ApplicationStartup {
 
@@ -30,10 +25,7 @@ public class ApplicationStartup {
     @Inject
     CarbonDataService carbonDataService;
 
-    /**
-     * Injected as {@link Instance} so that the bean is optional:
-     * {@link DevSampleDataService} is only active in the "dev" build profile.
-     */
+    /** Only resolvable in the dev build profile. */
     @Inject
     @Any
     Instance<DevSampleDataService> devSampleDataService;
@@ -43,13 +35,10 @@ public class ApplicationStartup {
         // Both the sync and the sample data need the teams to exist
         teamSetupService.initialiseTeams();
 
-        // Real data from the providers or sample data, never both
         if (carbonDataService.anyProviderEnabled()) {
-            // Runs synchronously, so the startup only completes once the data
-            // of the recent months has been fetched from the providers
+            // Blocks the startup until the recent months have been fetched
             carbonSyncScheduler.syncCarbonData();
         } else if (devSampleDataService.isResolvable()) {
-            // Dev mode only (bean absent in other profiles)
             devSampleDataService.get().seedSampleData();
         } else {
             LOG.info("No cloud provider enabled, skipping the initial carbon data sync.");

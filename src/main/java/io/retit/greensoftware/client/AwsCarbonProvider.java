@@ -13,11 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * AWS carbon data provider, fetching the estimated emissions of AWS accounts through
- * the {@link AwsCarbonApiClient}. The project IDs are the AWS account IDs. All periods
- * of a range are fetched with a single request.
- */
+/** Fetches all periods of a range with a single request. Project IDs are AWS account IDs. */
 @ApplicationScoped
 public class AwsCarbonProvider implements CarbonProvider {
 
@@ -57,8 +53,7 @@ public class AwsCarbonProvider implements CarbonProvider {
         for (String period : range.periods()) {
             Map<String, Double> metricTonsByAccount =
                     metricTonsByMonth.getOrDefault(Periods.toYearMonth(period), Map.of());
-            // Providers publish a month's data with a delay of up to a few weeks and
-            // return no rows until then, so no rows must not be mistaken for zero emissions
+            // No rows means not published yet (up to weeks after the month), not zero emissions
             List<String> unpublished = accountIds.stream()
                     .filter(accountId -> !metricTonsByAccount.containsKey(accountId))
                     .toList();
@@ -67,7 +62,6 @@ public class AwsCarbonProvider implements CarbonProvider {
                         unpublished, period);
                 continue;
             }
-            // AWS API returns metric tons of CO2-equivalent; convert to kg
             results.put(period, accountIds.stream()
                     .map(accountId -> new CarbonData(accountId, metricTonsByAccount.get(accountId) * 1000.0))
                     .toList());

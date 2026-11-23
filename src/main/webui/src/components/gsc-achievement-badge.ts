@@ -5,12 +5,8 @@ import type { Achievement } from "../types.ts";
 import { groupBadge, groupTooltip } from "../util/achievements.ts";
 
 /**
- * Achievement badge component. Renders a small pill/chip showing the icon and
- * title of a group of achievements of the same kind (see `groupAchievements`),
- * with the highest tier reached for achievements with tiers, and the number of
- * times it was awarded or that tier was reached if more than once (see
- * `groupBadge`). Supports a compact mode for inline display, which leaves out the
- * title and tier, as the tooltip names both.
+ * Badge of a group of achievements of the same kind, see `groupBadge`. The compact
+ * mode leaves out the title and tier, which the tooltip names.
  */
 @customElement("gsc-achievement-badge")
 export class GscAchievementBadge extends LitElement {

@@ -24,13 +24,9 @@ import java.util.Optional;
 import java.util.TreeMap;
 
 /**
- * Evaluates rule-based achievement criteria after each carbon data sync and
- * awards achievements to qualifying teams.
- *
- * <p>Emissions are compared by their daily averages, so that months of different
- * length are comparable, see {@link Reductions}. Each achievement is granted at most
- * once per team and period, so that teams can earn the same achievement again in
- * later periods.
+ * Awards the rule-based achievements of a period. Emissions are compared by their daily
+ * averages, see {@link Reductions}. Each achievement is granted at most once per team
+ * and period, so teams can earn it again in later periods.
  */
 @ApplicationScoped
 public class AchievementService {
@@ -64,10 +60,6 @@ public class AchievementService {
     /** Annual Improver: the thresholds, as minimum reductions in percent, ascending. */
     private static final List<Integer> ANNUAL_IMPROVER_THRESHOLDS = List.of(10, 25, 50);
 
-    /**
-     * Evaluates all achievement rules for the given period and persists new awards.
-     * Must be called within a transaction.
-     */
     @Transactional
     public void evaluateAchievements(String period) {
         List<TeamHistory> histories = findHistories(period);
@@ -86,21 +78,16 @@ public class AchievementService {
     }
 
     /**
-     * A team's entries up to the evaluated period, by period. Later periods are left
-     * out, so that evaluating an older period does not count data it could not know
-     * about.
+     * A team's entries by period, only up to the evaluated one, so that evaluating an
+     * older period ignores data it could not know about.
      */
     private record TeamHistory(Team team, NavigableMap<String, CarbonEntry> entries) {
 
-        /** The daily average of the team's emissions in {@code period}, or null without data. */
         Double perDay(String period) {
             return Reductions.perDay(entries.get(period));
         }
 
-        /**
-         * The daily average of the team's emissions over all of {@code periods}, or null
-         * if any of them lacks data.
-         */
+        /** The daily average over all of {@code periods}, or null if any lacks data. */
         Double perDayOver(List<String> periods) {
             double co2Kg = 0;
             int days = 0;
@@ -115,7 +102,7 @@ public class AchievementService {
             return co2Kg / days;
         }
 
-        /** The reduction in {@code period} vs. the month before in percent, or null. */
+        /** Vs. the month before, in percent, or null. */
         Double reduction(String period) {
             return Reductions.percent(perDay(Periods.previous(period)), perDay(period));
         }
@@ -138,10 +125,9 @@ public class AchievementService {
     }
 
     /**
-     * Award "Reduction Champion" to the team with the largest reduction vs. the
-     * previous month in percent. Teams whose emissions in the previous month were below
-     * {@value #HIGHEST_REDUCTION_MIN_SHARE_PERCENT} % of the company's do not compete,
-     * as small footprints swing by large percentages.
+     * Reduction Champion: the largest reduction vs. the previous month in percent, among
+     * the teams with at least {@value #HIGHEST_REDUCTION_MIN_SHARE_PERCENT} % of the
+     * company's emissions in the previous month.
      */
     private void checkHighestReduction(List<TeamHistory> histories, String period) {
         String previous = Periods.previous(period);
@@ -162,11 +148,9 @@ public class AchievementService {
     }
 
     /**
-     * Award "Most CO₂e Saved" to the team that saved the most CO2e vs. the previous
-     * month in kg: the difference of the daily averages over the days of
-     * {@code period}. The counterpart of Reduction Champion, which favors small teams
-     * as their footprint changes by larger percentages, while large teams can save the
-     * most in absolute terms.
+     * Most CO₂e Saved: the largest saving in kg vs. the previous month's daily rate over
+     * the days of {@code period}. Favors large teams, as Reduction Champion favors small
+     * ones.
      */
     private void checkMostCo2Saved(List<TeamHistory> histories, String period) {
         String previous = Periods.previous(period);
@@ -182,11 +166,9 @@ public class AchievementService {
     }
 
     /**
-     * Award "Big Saver" to every team whose daily average is at least
-     * {@value #BIG_SAVER_MIN_PERCENT} % below its daily average over the previous
-     * {@value #BIG_SAVER_BASELINE_MONTHS} months, which all need data. Comparing with
-     * several months rather than only the previous one does not reward returning to
-     * normal after a single month of unusually high emissions.
+     * Big Saver: every team at least {@value #BIG_SAVER_MIN_PERCENT} % below its average
+     * over the previous {@value #BIG_SAVER_BASELINE_MONTHS} months, which all need data.
+     * The longer baseline does not reward returning to normal after a spike.
      */
     private void checkBigSaver(List<TeamHistory> histories, String period) {
         List<String> baseline = Periods.window(Periods.previous(period), BIG_SAVER_BASELINE_MONTHS);
@@ -199,12 +181,10 @@ public class AchievementService {
     }
 
     /**
-     * Award "Green Streak" to every team whose daily average has been at least
-     * {@value #GREEN_STREAK_MIN_PERCENT} % below the month before for 3, 6 or 12 months
-     * in a row. The highest threshold reached is granted, unless the streak has
-     * already earned it or a higher one, so each threshold is granted once per streak.
-     * A gap in the history or a month without enough reduction ends the streak, and the
-     * next streak can earn the thresholds again.
+     * Green Streak: every team at least {@value #GREEN_STREAK_MIN_PERCENT} % below the
+     * month before for {@link #GREEN_STREAK_THRESHOLDS} months in a row, at the highest
+     * threshold reached. Each threshold is granted once per streak, which a gap in the
+     * history or a month without enough reduction ends.
      */
     private void checkGreenStreak(List<TeamHistory> histories, String period) {
         for (TeamHistory history : histories) {
@@ -228,17 +208,16 @@ public class AchievementService {
         }
     }
 
-    /** Whether {@code period} continues a green streak, see {@link #checkGreenStreak}. */
     private static boolean isStreakMonth(TeamHistory history, String period) {
         Double reduction = history.reduction(period);
         return reduction != null && reduction >= GREEN_STREAK_MIN_PERCENT;
     }
 
     /**
-     * Award "Personal Best" to every team whose daily average is at least
-     * {@value #PERSONAL_BEST_MIN_PERCENT} % below its lowest one of any earlier month.
-     * Requires data for at least {@value #PERSONAL_BEST_MIN_EARLIER_MONTHS} earlier
-     * months, so that a short history does not make every reduction a record.
+     * Personal Best: every team at least {@value #PERSONAL_BEST_MIN_PERCENT} % below its
+     * lowest earlier month, with data for at least
+     * {@value #PERSONAL_BEST_MIN_EARLIER_MONTHS} earlier months, so that a short history
+     * does not make every reduction a record.
      */
     private void checkPersonalBest(List<TeamHistory> histories, String period) {
         for (TeamHistory history : histories) {
@@ -257,11 +236,10 @@ public class AchievementService {
     }
 
     /**
-     * Award "Annual Improver" to every team whose daily average over the calendar year
-     * ending with {@code december} is at least 10, 25 or 50 % below the previous year's,
-     * at the highest threshold reached. Requires data for every month of both years.
-     * Comparing whole years, seasonal changes, e.g., of the grid's carbon intensity,
-     * do not count.
+     * Annual Improver: every team whose calendar year ending with {@code december} is
+     * {@link #ANNUAL_IMPROVER_THRESHOLDS} % below the previous one, at the highest
+     * threshold reached. Requires data for every month of both years. Comparing whole
+     * years leaves out seasonal changes, e.g. of the grid's carbon intensity.
      */
     private void checkAnnualImprover(List<TeamHistory> histories, String december) {
         List<String> year = Periods.window(december, 12);
@@ -283,11 +261,7 @@ public class AchievementService {
                 .max(Integer::compare);
     }
 
-    /**
-     * Grants {@code type} to {@code team} for {@code period} unless the team already has
-     * it for that period, so that evaluating a period again does not grant it twice,
-     * while the team can earn it again in later periods.
-     */
+    /** Unless the team already has it for {@code period}, e.g. from an earlier evaluation. */
     private void grant(Team team, AchievementType type, String period, Integer threshold, Double measuredValue) {
         boolean alreadyGranted = Achievement.count("team = ?1 and type = ?2 and period = ?3",
                 team, type, period) > 0;
@@ -334,11 +308,7 @@ public class AchievementService {
         };
     }
 
-    /**
-     * What achievements of {@code type} are awarded for, as of the current rules, so that
-     * it can be shown once for all awards of a type, which then only need their values.
-     * Null for {@link AchievementType#CUSTOM}, which an admin describes per award.
-     */
+    /** What achievements of {@code type} are awarded for; null for {@link AchievementType#CUSTOM}. */
     public static String criteria(AchievementType type) {
         return switch (type) {
             case HIGHEST_REDUCTION -> String.format(Locale.ROOT,
@@ -365,9 +335,8 @@ public class AchievementService {
     }
 
     /**
-     * The tier of an achievement of {@code type} with {@code threshold}: how many of
-     * the type's thresholds it reaches, e.g., 3 for a 12-month green streak. Null for
-     * types without thresholds, or if it reaches none of them under the current rules.
+     * How many of {@code type}'s current thresholds {@code threshold} reaches, e.g. 3 for
+     * a 12-month green streak; null if none.
      */
     public static Integer tier(AchievementType type, Integer threshold) {
         if (threshold == null) {
@@ -377,7 +346,6 @@ public class AchievementService {
         return reached > 0 ? (int) reached : null;
     }
 
-    /** The thresholds of {@code type}, ascending, or none if it has no thresholds. */
     private static List<Integer> thresholds(AchievementType type) {
         return switch (type) {
             case GREEN_STREAK -> GREEN_STREAK_THRESHOLDS;
@@ -394,11 +362,7 @@ public class AchievementService {
                 : String.join(", ", names.subList(0, names.size() - 1)) + " or " + names.getLast();
     }
 
-    /**
-     * Manually grants a custom achievement to a team (e.g., via admin UI shoutout) for
-     * the current period. Unlike the other achievements, a team can be granted any
-     * number of them per period.
-     */
+    /** For the current period. Unlike the rule-based achievements, any number per period. */
     @Transactional
     public Achievement grantCustomAchievement(Team team, String title, String description,
                                                String badgeIcon) {

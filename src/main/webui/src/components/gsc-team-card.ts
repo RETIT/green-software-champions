@@ -195,7 +195,6 @@ export class GscTeamCard extends LitElement {
       font-weight: 300;
     }
 
-    /* ── Card shell ─────────────────────────────────────── */
     .card {
       background: var(--retit-surface);
       border-radius: 3px;
@@ -224,7 +223,6 @@ export class GscTeamCard extends LitElement {
       width: 0;
     }
 
-    /* Rank-specific top color */
     .card.rank-1::before {
       background: var(--retit-gold);
       width: 100%;
@@ -238,14 +236,12 @@ export class GscTeamCard extends LitElement {
       width: 100%;
     }
 
-    /* ── Top row ────────────────────────────────────────── */
     .top-row {
       display: flex;
       align-items: center;
       gap: 1em;
     }
 
-    /* Rank badge */
     .rank-badge {
       display: flex;
       align-items: center;
@@ -329,7 +325,6 @@ export class GscTeamCard extends LitElement {
       width: 28px;
     }
 
-    /* Metrics */
     .metrics {
       display: flex;
       gap: 2em;
@@ -365,13 +360,11 @@ export class GscTeamCard extends LitElement {
       color: var(--retit-text-light);
     }
 
-    /* Trend sparkline */
     .trend {
       flex-shrink: 0;
       --sparkline-color: var(--team-color);
     }
 
-    /* Achievements */
     .achievements {
       display: flex;
       align-items: center;
@@ -392,7 +385,6 @@ export class GscTeamCard extends LitElement {
       flex-wrap: wrap;
     }
 
-    /* Expand chevron */
     .chevron {
       font-size: 0.7em;
       color: var(--retit-text-light);
@@ -404,7 +396,6 @@ export class GscTeamCard extends LitElement {
       transform: rotate(180deg);
     }
 
-    /* ── Expanded section ───────────────────────────────── */
     .expand-section {
       margin-top: 1em;
       padding-top: 1em;
@@ -423,7 +414,6 @@ export class GscTeamCard extends LitElement {
       margin-bottom: 0.4em;
     }
 
-    /* Provider chips */
     .provider-breakdown {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -453,7 +443,6 @@ export class GscTeamCard extends LitElement {
       color: var(--retit-text);
     }
 
-    /* Share bar */
     .share-bar-label {
       display: flex;
       justify-content: space-between;

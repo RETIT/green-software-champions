@@ -1,15 +1,3 @@
-# =============================================================================
-# Green Software Champions – CI Build
-# =============================================================================
-# Runs on every push to main and on every pull request, whatever its target
-# branch.
-#
-# Jobs
-# ────
-# test    – unit tests (H2 in-memory, no Docker/Keycloak/Node.js needed)
-# package – backend + frontend build, uploads the uber-jar
-# =============================================================================
-
 name: Build
 
 on:
@@ -18,24 +6,19 @@ on:
   pull_request:
 
 concurrency:
-  # Cancel in-progress runs for the same branch/PR (saves CI minutes)
+  # Cancel superseded runs of the same branch or PR
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  # ---------------------------------------------------------------------------
-  # Job 1: compile + unit tests
-  # No external services required – the %test profile in application.yaml uses
-  # H2 in-memory, no Keycloak, and disables the cloud providers and the
-  # scheduler. The teams come from sample-teams.yaml.
-  # ---------------------------------------------------------------------------
+  # Needs no external services, see the %test profile in application.yaml
   test:
     name: Test (Java ${{ matrix.java }})
     runs-on: ubuntu-latest
 
     strategy:
       matrix:
-        java: [ "25" ]   # currently pinned to JDK 25; extend this list to test multiple JDK versions
+        java: [ "25" ]
 
     steps:
       - name: Checkout
@@ -46,12 +29,10 @@ jobs:
         with:
           java-version: ${{ matrix.java }}
           distribution: temurin
-          cache: maven          # caches ~/.m2/repository between runs
+          cache: maven
 
       - name: Run unit tests
-        # Stops before the package phase, so the frontend isn't built here
-        # (Quinoa is also disabled in tests) and no Node.js is needed.
-        # The package job builds the frontend.
+        # Stops before the package phase, so no Node.js is needed for the frontend
         run: mvn --batch-mode --no-transfer-progress test
 
       - name: Upload Surefire reports on failure
@@ -62,15 +43,11 @@ jobs:
           path: target/surefire-reports/
           retention-days: 7
 
-  # ---------------------------------------------------------------------------
-  # Job 2: full package build (backend + frontend via Quinoa/Vite)
-  # Produces an uber-jar, a single jar with the application, its libraries and
-  # the frontend, and uploads it as a build artifact.
-  # ---------------------------------------------------------------------------
+  # Builds the backend and, via Quinoa, the frontend into a single uber-jar
   package:
     name: Package
     runs-on: ubuntu-latest
-    needs: test         # only package if tests pass
+    needs: test
 
     steps:
       - name: Checkout
@@ -91,8 +68,7 @@ jobs:
           cache-dependency-path: src/main/webui/package-lock.json
 
       - name: Build application (skip tests – already run in the test job)
-        # Uber-jar (packaging into one single jar) only in CI
-        # a local mvn package still builds the fast-jar
+        # Uber-jar only in CI; a local mvn package builds the fast-jar
         run: mvn --batch-mode --no-transfer-progress package -DskipTests -Dquarkus.package.jar.type=uber-jar
 
       - name: Upload application

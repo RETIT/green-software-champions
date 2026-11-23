@@ -19,13 +19,11 @@ public class CarbonEntry extends PanacheEntity {
     @JoinColumn(name = "team_id", nullable = false)
     public Team team;
 
-    /**
-     * Reporting period in the format YYYY-MM (e.g., "2024-03").
-     */
+    /** YYYY-MM */
     @Column(nullable = false, length = 7)
     public String period;
 
-    /** Total CO2-equivalent emissions in kg for this period. */
+    /** Null rather than 0 if no provider has data for the team. */
     @Column(name = "total_co2_kg", columnDefinition = "DECIMAL(20,4)")
     public Double totalCo2Kg;
 
@@ -49,7 +47,6 @@ public class CarbonEntry extends PanacheEntity {
         return list("period", period);
     }
 
-    /** The entries of {@code period}, keyed by team id. */
     public static Map<Long, CarbonEntry> findByPeriodByTeamId(String period) {
         return findByPeriod(period).stream()
                 .collect(Collectors.toMap(e -> e.team.id, Function.identity()));
@@ -59,7 +56,6 @@ public class CarbonEntry extends PanacheEntity {
         return list("period in ?1", periods);
     }
 
-    /** The entries of all teams for {@code period} and every earlier period. */
     public static List<CarbonEntry> findUpTo(String period) {
         // YYYY-MM strings sort chronologically
         return list("period <= ?1", period);
@@ -80,7 +76,6 @@ public class CarbonEntry extends PanacheEntity {
                 .getResultList();
     }
 
-    /** The earliest period any team has an entry for, if there are any entries. */
     public static Optional<String> findEarliestPeriod() {
         return Optional.ofNullable(getEntityManager()
                 .createQuery("select min(e.period) from CarbonEntry e", String.class)

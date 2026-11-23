@@ -14,10 +14,7 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-/**
- * REST resource telling the frontend who is logged in. Unlike the leaderboard, it
- * only requires a login, not the "user" role.
- */
+/** Unlike the leaderboard, only requires a login, not the role "user". */
 @Path("/api/me")
 @Produces(MediaType.APPLICATION_JSON)
 @Tag(name = "User", description = "The logged-in user")

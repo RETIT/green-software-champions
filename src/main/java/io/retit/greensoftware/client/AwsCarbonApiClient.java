@@ -27,15 +27,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Client for the AWS Sustainability API, based on the AWS SDK for Java.
- *
- * <p>The SDK derives the endpoint from {@code cloud.aws.region} and signs the requests.
- * It authenticates with {@code cloud.aws.access-key} and {@code cloud.aws.secret-key}
- * if both are set, otherwise with its default credentials chain (e.g., IAM roles). The
- * identity needs the IAM action {@code sustainability:GetEstimatedCarbonEmissions}.
- *
- * <p>The SDK client is only built on first use, so nothing is set up while the AWS
- * provider is disabled.
+ * Client for the AWS Sustainability API. The identity needs the IAM action
+ * {@code sustainability:GetEstimatedCarbonEmissions}. The SDK client is only built on
+ * first use, so nothing is set up while the AWS provider is disabled.
  *
  * @see <a href="https://docs.aws.amazon.com/sustainability/latest/APIReference/API_GetEstimatedCarbonEmissions.html">
  *      GetEstimatedCarbonEmissions</a>
@@ -45,10 +39,7 @@ public class AwsCarbonApiClient {
 
     private static final Logger LOG = Logger.getLogger(AwsCarbonApiClient.class);
 
-    /**
-     * AWS reports each month both location-based and market-based, so exactly one of
-     * them has to be selected, as adding them up would count the emissions twice.
-     */
+    /** Location-based. AWS also reports market-based emissions, so summing all would count them twice. */
     private static final EmissionsType EMISSIONS_TYPE = EmissionsType.TOTAL_LBM_CARBON_EMISSIONS;
 
     @Inject
@@ -75,14 +66,11 @@ public class AwsCarbonApiClient {
     }
 
     /**
-     * Retrieves the estimated emissions of the given accounts in each month from
-     * {@code first} to {@code last} with a single (paginated) request.
+     * The estimated emissions of {@code accountIds} (not empty) in each month from
+     * {@code first} to {@code last}, both inclusive.
      *
-     * @param accountIds AWS account IDs (12-digit numbers), must not be empty.
-     * @param first      The first month to retrieve (inclusive).
-     * @param last       The last month to retrieve (inclusive).
-     * @return Emissions in metric tons of CO2-equivalent by month and account ID. Months
-     *         and accounts AWS returned no data for are missing.
+     * @return metric tons of CO2e by month and account ID; months and accounts without
+     *         data are missing
      */
     public Map<YearMonth, Map<String, Double>> getEstimatedEmissions(List<String> accountIds,
                                                                      YearMonth first, YearMonth last) {
@@ -109,7 +97,6 @@ public class AwsCarbonApiClient {
         return month.atDay(1).atStartOfDay(ZoneOffset.UTC).toInstant();
     }
 
-    /** The month {@code row} reports on, as rows of the monthly granularity cover one month each. */
     private static YearMonth monthOf(EstimatedCarbonEmissions row) {
         return YearMonth.from(row.timePeriod().start().atZone(ZoneOffset.UTC));
     }

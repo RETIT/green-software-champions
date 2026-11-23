@@ -12,11 +12,7 @@ export interface SparklinePoint {
   label: string;
   /** null marks a period without data; it is drawn as a gap. */
   value: number | null;
-  /**
-   * Length of the period in days. The line and the change in the readout use the
-   * value normalized to NORMALIZED_DAYS, so periods of different length are
-   * comparable; the readout shows both values.
-   */
+  /** Length of the period, to normalize the value for the line and the change. */
   days: number;
 }
 
@@ -27,7 +23,7 @@ function normalized(point: SparklinePoint | undefined): number | null {
 
 /** viewBox height; the width is 100, so x coordinates are percentages. */
 const HEIGHT = 30;
-/** Vertical padding inside the viewBox so the line never touches the edges. */
+/** Vertical padding, so the line never touches the edges. */
 const PADDING = 4;
 /**
  * Minimum y-range relative to the largest value, so that small month-to-month
@@ -49,10 +45,9 @@ function domain(values: number[]): [number, number] {
 }
 
 /**
- * Minimal trend line with a marker on the last point and a hover readout.
- * Renders nothing until at least two points have data.
- * The line color is set through `--sparkline-color`, the marker color through
- * `--sparkline-marker-color` (defaults to the line color).
+ * Trend line with a marker on the last point and a hover readout; nothing until two
+ * points have data. Colored by `--sparkline-color` and `--sparkline-marker-color`
+ * (defaults to the line color).
  */
 @customElement("gsc-sparkline")
 export class GscSparkline extends LitElement {
@@ -94,11 +89,7 @@ export class GscSparkline extends LitElement {
     return segments;
   }
 
-  /**
-   * Reduction in percent from the point before `index` to the one at `index`
-   * after normalization (positive means a drop), or null if either has no data
-   * or the previous is 0.
-   */
+  /** Of the normalized values; null if either has no data or the previous is 0. */
   private _reductionFromPrevious(index: number): number | null {
     const current = normalized(this.points[index]);
     const previous = normalized(this.points[index - 1]);
@@ -120,8 +111,7 @@ export class GscSparkline extends LitElement {
   }
 
   override updated() {
-    // The tooltip lives in the top layer so that cards with overflow: hidden
-    // don't clip it; position it above the hovered point.
+    // A popover in the top layer, so that cards with overflow: hidden don't clip it
     const tooltip = this._tooltip;
     if (!tooltip) return;
     if (this._hoverIndex === null) {
@@ -138,8 +128,7 @@ export class GscSparkline extends LitElement {
     const values = this.points
       .map(normalized)
       .filter((v): v is number => v !== null);
-    // A single value is no trend yet; the host keeps its size, so the layout
-    // around it doesn't shift once there is one
+    // No trend yet; the host keeps its size, so the layout doesn't shift once there is one
     if (values.length < 2) return nothing;
 
     const range = domain(values);

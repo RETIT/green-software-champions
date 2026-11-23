@@ -3,11 +3,10 @@ package io.retit.greensoftware.dto;
 import java.util.Set;
 
 /**
- * The logged-in user, as shown by the frontend.
+ * The logged-in user.
  *
- * @param name  The user name, or null if nobody is logged in, e.g. in dev mode,
- *              where the security checks are disabled.
- * @param roles The user's roles of this application ("user", "admin").
+ * @param name  null if nobody is logged in, which only happens in dev mode
+ * @param roles the user's roles of this application: "user", "admin"
  */
 public record UserDto(String name, Set<String> roles) {
 }

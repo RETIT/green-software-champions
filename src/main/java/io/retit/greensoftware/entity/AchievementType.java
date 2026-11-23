@@ -1,12 +1,8 @@
 package io.retit.greensoftware.entity;
 
 /**
- * The kinds of achievements, with the title and badge icon each one is shown with.
- *
- * <p>Except for {@link #CUSTOM}, achievements are granted by {@code AchievementService}
- * when a period is evaluated, each at most once per team and period, so that a team
- * can earn the same achievement again in later periods. The rules are documented
- * there.
+ * The kinds of achievements. Except for {@link #CUSTOM}, they are granted by
+ * {@code AchievementService}, which documents the rules.
  */
 public enum AchievementType {
 
@@ -50,10 +46,10 @@ public enum AchievementType {
     /** Granted by an admin, with a title and badge icon of their choice. */
     CUSTOM(null, null);
 
-    /** The title shown for this kind of achievement, null for {@link #CUSTOM}. */
+    /** Null for {@link #CUSTOM}. */
     public final String title;
 
-    /** The badge icon shown for this kind of achievement, null for {@link #CUSTOM}. */
+    /** Null for {@link #CUSTOM}. */
     public final String badgeIcon;
 
     AchievementType(String title, String badgeIcon) {

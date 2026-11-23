@@ -10,28 +10,24 @@ public class AchievementDto {
     public String description;
 
     /**
-     * What achievements of this type are awarded for, as of the current rules, or null
-     * for custom achievements. Unlike {@link #description}, it is the same for all
-     * achievements of a type and does not quote the value this one was awarded for.
+     * What achievements of this type are awarded for, the same for all of them, unlike
+     * {@link #description}; null for custom achievements.
      */
     public String criteria;
 
     public String badgeIcon;
 
-    /** Period (YYYY-MM) the achievement was awarded for. */
+    /** YYYY-MM period the achievement was awarded for. */
     public String period;
     public String type;
 
-    /** The threshold reached, for the types with thresholds, otherwise null. */
+    /** Null for types without thresholds. */
     public Integer threshold;
 
-    /**
-     * The tier the threshold stands for, counting from 1, e.g., 3 for the third of a
-     * type's thresholds, or null for types without thresholds.
-     */
+    /** How many of the type's thresholds were reached, e.g. 3 for a 12-month green streak. */
     public Integer tier;
 
-    /** The value the achievement was awarded for, e.g., the reduction in percent, or null. */
+    /** The value the achievement was awarded for, e.g. the reduction in percent, or null. */
     public Double measuredValue;
 
     public static AchievementDto from(Achievement achievement) {

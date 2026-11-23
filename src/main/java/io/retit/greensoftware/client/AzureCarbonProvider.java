@@ -15,14 +15,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Azure carbon footprint data provider.
- *
- * <p>Connects to the Microsoft Cloud for Sustainability / Azure Resource Manager API
- * to retrieve carbon emissions data per resource group or subscription.
- *
- * <p><b>Authentication:</b> Uses OAuth2 client credentials flow against Azure Active Directory.
- * Configure {@code cloud.azure.tenant-id}, {@code cloud.azure.client-id}, and
- * {@code cloud.azure.client-secret} to enable token acquisition.
+ * Project IDs are subscription or resource group paths. Authenticates with the OAuth2
+ * client credentials {@code cloud.azure.tenant-id}, {@code client-id} and
+ * {@code client-secret}.
  *
  * @see <a href="https://learn.microsoft.com/en-us/azure/carbon-optimization/">
  *      Azure Carbon Optimization</a>
@@ -60,11 +55,7 @@ public class AzureCarbonProvider implements CarbonProvider {
         return CarbonProvider.fetchEachPeriod(range, period -> fetchPeriod(projects, period, bearerToken));
     }
 
-    /**
-     * Fetches the data of all {@code projects} in {@code period}.
-     *
-     * @throws CarbonDataUnavailableException if the data of any project could not be fetched
-     */
+    /** @throws CarbonDataUnavailableException if any project's data could not be fetched */
     private List<CarbonData> fetchPeriod(List<CloudProject> projects, String period, String bearerToken) {
         List<CarbonData> results = new ArrayList<>();
         YearMonth ym = Periods.toYearMonth(period);
@@ -89,10 +80,7 @@ public class AzureCarbonProvider implements CarbonProvider {
         return results;
     }
 
-    /**
-     * Acquires an OAuth2 access token from Azure Active Directory using the
-     * client credentials flow.
-     */
+    /** Null if the credentials are missing or no token could be obtained. */
     private String acquireAccessToken() {
         CloudProvidersConfig.AzureConfig azureConfig = config.azure();
         if (azureConfig.tenantId().isEmpty() || azureConfig.clientId().isEmpty()
@@ -101,10 +89,8 @@ public class AzureCarbonProvider implements CarbonProvider {
             return null;
         }
         try {
-            // Use the Azure AD token endpoint
             String tokenEndpoint = "https://login.microsoftonline.com/"
                     + azureConfig.tenantId().get() + "/oauth2/v2.0/token";
-            // In production, use a proper HTTP client; simplified here for clarity
             java.net.http.HttpClient httpClient = java.net.http.HttpClient.newHttpClient();
             String body = "grant_type=client_credentials"
                     + "&client_id=" + azureConfig.clientId().get()
@@ -132,12 +118,11 @@ public class AzureCarbonProvider implements CarbonProvider {
     }
 
     private double extractTotalCo2Kg(AzureCarbonApiClient.CarbonEmissionResponse response) {
-        // Providers publish a month's data with a delay of up to a few weeks and
-        // return no rows until then, so no rows must not be mistaken for zero emissions
+        // No rows means not published yet (up to weeks after the month), not zero emissions
         if (response == null || response.value() == null || response.value().isEmpty()) {
             throw new CarbonDataUnavailableException("No data published yet");
         }
-        // Azure returns carbon in metric tons of CO2e; convert to kg
+        // Metric tons to kg
         return response.value().stream()
                 .mapToDouble(e -> e.totalCarbonEmission() != null ? e.totalCarbonEmission() * 1000.0 : 0.0)
                 .sum();

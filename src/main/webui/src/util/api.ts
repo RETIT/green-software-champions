@@ -1,7 +1,6 @@
 /**
- * The status Quarkus answers the frontend's requests with once the login session
- * has expired, instead of redirecting them to the identity provider, which fetch()
- * could not follow (quarkus.oidc.authentication.java-script-auto-redirect=false).
+ * Quarkus's answer once the session has expired, instead of a redirect to the
+ * identity provider, which fetch() could not follow (java-script-auto-redirect).
  */
 const SESSION_EXPIRED = 499;
 
@@ -16,11 +15,8 @@ export class AccessDeniedError extends Error {
 }
 
 /**
- * fetch() for the backend's API. Marks the request as one of JavaScript, so that
- * Quarkus answers it with 499 rather than a redirect once the session has
- * expired. The page is then reloaded, which leads through the identity provider's
- * login back to it, without asking for the password while the provider's own
- * session is active.
+ * fetch() for the backend's API. Once the session has expired, reloads the page,
+ * which leads through the identity provider's login back to it.
  *
  * @throws AccessDeniedError if the user lacks the required role (403)
  */

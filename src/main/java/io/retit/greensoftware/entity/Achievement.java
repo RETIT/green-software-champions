@@ -22,10 +22,7 @@ public class Achievement extends PanacheEntity {
     @Column(name = "badge_icon")
     public String badgeIcon;
 
-    /**
-     * Reporting period in the format YYYY-MM (e.g., "2024-03") the achievement was
-     * awarded for, or for a custom achievement the one it was granted in.
-     */
+    /** YYYY-MM period awarded for, or for custom achievements, granted in. */
     @Column(nullable = false, length = 7)
     public String period;
 
@@ -33,34 +30,24 @@ public class Achievement extends PanacheEntity {
     @Column(name = "achievement_type")
     public AchievementType type;
 
-    /**
-     * The threshold reached, for the types with thresholds (see
-     * {@link AchievementType}), otherwise null.
-     */
+    /** Null for types without thresholds, see {@link AchievementType}. */
     @Column(name = "achievement_threshold")
     public Integer threshold;
 
-    /**
-     * The value the achievement was awarded for, e.g., the reduction in percent (see
-     * {@link AchievementType}), or null if its type has none.
-     */
+    /** The value awarded for, e.g. the reduction in percent, see {@link AchievementType}. */
     @Column(name = "measured_value")
     public Double measuredValue;
 
-    /** The achievements of {@code team}, latest period first. */
+    /** Latest period first. */
     public static List<Achievement> findByTeam(Team team) {
         return list("team = ?1 order by period desc, id desc", team);
     }
 
-    /** The achievements of all teams, latest period first. */
     public static List<Achievement> findAllLatestFirst() {
         return list("order by period desc, id desc");
     }
 
-    /**
-     * The achievements of all teams awarded for {@code period} or earlier, latest
-     * period first.
-     */
+    /** Awarded for {@code period} or earlier, latest period first. */
     public static List<Achievement> findUpTo(String period) {
         // YYYY-MM strings sort chronologically
         return list("period <= ?1 order by period desc, id desc", period);

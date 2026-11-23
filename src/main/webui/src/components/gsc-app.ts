@@ -41,22 +41,13 @@ const TREND_ICON: Record<Trend, string> = {
   neutral: "➖",
 };
 
-/**
- * Root application shell — styled to RETIT CI.
- */
 @customElement("gsc-app")
 export class GscApp extends LitElement {
-  /**
-   * The selected period. Empty until the user picks one, which lets the backend
-   * choose the latest period every team has data for.
-   */
+  /** Empty until the user picks one, letting the backend choose. */
   @property({ type: String }) period = "";
   @state() private _activeView: View = "leaderboard";
 
-  /**
-   * Reruns whenever `period` changes. A new run aborts the in-flight fetches
-   * of the previous one, and results of superseded runs are discarded.
-   */
+  /** Reruns when `period` changes, aborting the previous run's fetches. */
   private _dataTask = new Task(this, {
     task: async ([period], { signal }): Promise<LeaderboardData> => {
       const query = period ? `?period=${encodeURIComponent(period)}` : "";
@@ -89,7 +80,6 @@ export class GscApp extends LitElement {
     args: () => [this.period] as const,
   });
 
-  /** The logged-in user, shown with the logout link once loaded. */
   private _userTask = new Task(this, {
     task: async (_args, { signal }): Promise<User> => {
       const response = await apiFetch("/api/me", signal);
@@ -105,10 +95,7 @@ export class GscApp extends LitElement {
     return this.period || this._dataTask.value?.summary.period || "";
   }
 
-  /**
-   * The previous month, the latest one the scheduled sync can fetch. Used for
-   * the demo data when the backend could not choose a period.
-   */
+  /** The previous month, for the demo data when the backend could not choose a period. */
   private _fallbackPeriod(): string {
     const d = new Date();
     const current = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -128,7 +115,7 @@ export class GscApp extends LitElement {
     // One period more than charted, so the oldest charted one has a predecessor
     const periods = periodWindow(period, HISTORY_MONTHS + 1);
     const previousPeriod = periods[periods.length - 2];
-    // Title and badge icon of each achievement type, as the backend grants them
+    // As in the backend's AchievementType
     const achievementKinds: Record<string, [string, string]> = {
       HIGHEST_REDUCTION: ["Reduction Champion", "🏆"],
       MOST_CO2_SAVED: ["Most CO₂e Saved", "💪"],
@@ -152,8 +139,7 @@ export class GscApp extends LitElement {
       tier,
       measuredValue: null,
     });
-    // Like the backend, compare daily averages so months of different length
-    // are comparable
+    // Of daily averages, like the backend
     const reduction = (previous: number, current: number) => {
       const previousPerDay = previous / daysInPeriod(previousPeriod);
       const currentPerDay = current / daysInPeriod(period);
@@ -161,8 +147,7 @@ export class GscApp extends LitElement {
     };
     const ranked = teams
       .map((t, i): LeaderboardEntry => {
-        // Random walk back from the current period: a random average monthly
-        // reduction (negative = growing) plus random month-to-month noise
+        // Random walk back from the current period: a random trend plus noise
         const monthlyReduction = Math.random() * 0.06 - 0.02;
         const totals = [baseCo2[i] * (0.9 + Math.random() * 0.2)];
         for (let p = 1; p < periods.length; p++) {
@@ -247,13 +232,11 @@ export class GscApp extends LitElement {
 
   private _onPeriodChange(e: Event) {
     const input = e.target as HTMLInputElement;
-    // A cleared month input yields "", which is not a valid period. The
-    // period itself is unchanged, so re-render to let live() restore it.
+    // Clearing the input yields "": re-render, so that live() restores the period
     if (!input.value) {
       this.requestUpdate();
       return;
     }
-    // Setting the period reruns the data task.
     this.period = input.value;
   }
 
@@ -331,17 +314,14 @@ export class GscApp extends LitElement {
     `;
   }
 
-  /**
-   * The logged-in user and the logout link. Nothing while loading, or without a
-   * login, as in dev mode, where the security checks are off.
-   */
+  /** Nothing while loading, or without a login, as in dev mode. */
   private _renderUser() {
     const name = this._userTask.value?.name;
     if (!name) return nothing;
     return html`
       <div class="user">
         <span class="user-name" title="Logged in as ${name}">👤 ${name}</span>
-        <!-- Handled by Quarkus: ends the session here and at the identity provider -->
+        <!-- Quarkus ends the session here and at the identity provider -->
         <a class="logout" href="/logout">Log out</a>
       </div>
     `;
@@ -349,7 +329,6 @@ export class GscApp extends LitElement {
 
   override render() {
     return html`
-      <!-- Navigation Bar -->
       <header>
         <div class="logo">
           <span class="logo-icon">
@@ -422,7 +401,6 @@ export class GscApp extends LitElement {
         </div>
       </header>
 
-      <!-- Hero -->
       <div class="hero">
         <div class="hero-inner">
           <div class="hero-text">
@@ -482,7 +460,6 @@ export class GscApp extends LitElement {
       color: var(--retit-text);
     }
 
-    /* ── Navigation bar (RETIT green) ──────────────────── */
     header {
       background: var(--retit-dark);
       color: var(--retit-white);
@@ -498,7 +475,6 @@ export class GscApp extends LitElement {
       box-shadow: var(--retit-shadow-raised);
     }
 
-    /* Logo */
     .logo {
       display: flex;
       align-items: center;
@@ -531,7 +507,6 @@ export class GscApp extends LitElement {
       font-weight: 300;
     }
 
-    /* Nav buttons */
     nav {
       display: flex;
       gap: 0.25em;
@@ -566,14 +541,12 @@ export class GscApp extends LitElement {
       box-shadow: inset 0 0 0 1px var(--retit-on-dark-border);
     }
 
-    /* Period selector and user, on the right */
     .header-end {
       display: flex;
       align-items: center;
       gap: 1.5em;
     }
 
-    /* Period selector */
     .period-selector {
       display: flex;
       align-items: center;
@@ -610,7 +583,6 @@ export class GscApp extends LitElement {
       );
     }
 
-    /* Logged-in user */
     .user {
       display: flex;
       align-items: center;
@@ -642,7 +614,6 @@ export class GscApp extends LitElement {
       background-color: var(--retit-on-dark-fill);
     }
 
-    /* ── Hero section ───────────────────────────────────── */
     .hero {
       background: var(--retit-bg);
       padding: 3em 2em 2em;
@@ -678,14 +649,12 @@ export class GscApp extends LitElement {
       margin: 0;
     }
 
-    /* ── Main content ───────────────────────────────────── */
     main {
       max-width: 1200px;
       margin: 0 auto;
       padding: 2em 2em 4em;
     }
 
-    /* ── Summary bar ────────────────────────────────────── */
     .summary-bar {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -746,7 +715,6 @@ export class GscApp extends LitElement {
       letter-spacing: 0.07em;
     }
 
-    /* ── Loading ────────────────────────────────────────── */
     .loading {
       text-align: center;
       padding: 5em 2em;
@@ -775,7 +743,6 @@ export class GscApp extends LitElement {
       }
     }
 
-    /* ── Error ──────────────────────────────────────────── */
     .error-msg {
       background: color-mix(in srgb, var(--retit-red) 8%, var(--retit-surface));
       border: 1px solid
@@ -791,7 +758,6 @@ export class GscApp extends LitElement {
       margin-bottom: 1.5em;
     }
 
-    /* ── Footer ─────────────────────────────────────────── */
     footer {
       background: var(--retit-dark);
       color: var(--retit-on-dark-text-muted);

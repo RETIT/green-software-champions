@@ -1,11 +1,8 @@
 # =============================================================================
-# Sample teams and their cloud projects – dev mode and tests only
-#
-# Loaded via quarkus.config.locations in application.yaml. In production, the
-# teams are read from the file named by TEAMS_FILE instead, which has the same
-# structure.
+# Sample teams and their cloud projects – dev mode and tests only. Production
+# reads a file of the same structure from TEAMS_FILE.
 # Created or updated in the database at every startup; teams and projects
-# removed here are not deleted from it. The tests refer to these teams by name.
+# removed here are kept there. The tests refer to these teams by name.
 # =============================================================================
 teams:
   definitions:

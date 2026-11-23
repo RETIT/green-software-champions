@@ -13,9 +13,8 @@ export function periodWindow(endPeriod: string, months: number): string[] {
 }
 
 /**
- * Month length that emissions are scaled to, so that months of different length
- * are comparable. Comparisons don't depend on it, as it cancels out in ratios;
- * it only sets the magnitude of the displayed normalized values.
+ * Month length that emissions are scaled to, so months of different length are
+ * comparable. Cancels out in comparisons; only sets the magnitude of shown values.
  */
 export const NORMALIZED_DAYS = 30;
 
@@ -27,7 +26,6 @@ export function normalizeToMonth(kg: number, days: number): number {
 /** The number of days in a YYYY-MM period. */
 export function daysInPeriod(period: string): number {
   const [year, month] = period.split("-").map(Number);
-  // Date months are 0-based, so the 1-based `month` refers to the following month;
-  // day 0 of that month rolls back to the last day of `period`.
+  // Date months are 0-based: day 0 of the following month is the last of `period`
   return new Date(year, month, 0).getDate();
 }

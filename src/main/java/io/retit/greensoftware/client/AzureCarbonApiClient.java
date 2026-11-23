@@ -7,10 +7,7 @@ import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 import java.util.List;
 
 /**
- * MicroProfile REST Client for the Azure Carbon Optimization / Resource Manager API.
- *
- * <p>Base URL is configured via {@code quarkus.rest-client.azure-carbon-api.url}
- * in application.yaml.
+ * REST client for the Azure Carbon Optimization API.
  *
  * @see <a href="https://learn.microsoft.com/en-us/rest/api/carbon/">
  *      Microsoft Azure Carbon REST API</a>
@@ -20,14 +17,8 @@ import java.util.List;
 public interface AzureCarbonApiClient {
 
     /**
-     * Retrieve carbon emission reports for a subscription or resource group.
-     *
-     * @param authorization Bearer token (Azure AD access token).
-     * @param scope         Azure resource scope (e.g., subscription or resource group path).
-     * @param apiVersion    API version string.
-     * @param year          Reporting year.
-     * @param month         Reporting month (1–12).
-     * @return Carbon emission response.
+     * The emissions of {@code scope}, a subscription or resource group path, in one
+     * month (1–12).
      */
     @GET
     @Path("/carbonEmissionReports")
@@ -39,10 +30,8 @@ public interface AzureCarbonApiClient {
             @QueryParam("reportYear") int year,
             @QueryParam("reportMonth") int month);
 
-    /** Top-level response wrapper from the Azure carbon API. */
     record CarbonEmissionResponse(List<CarbonEmissionEntry> value) {}
 
-    /** One emission entry per resource or aggregate. */
     record CarbonEmissionEntry(
             String resourceId,
             String resourceType,

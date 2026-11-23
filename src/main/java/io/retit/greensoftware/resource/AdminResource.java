@@ -19,10 +19,6 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import java.time.YearMonth;
 import java.time.format.DateTimeParseException;
 
-/**
- * Admin-only REST resource for triggering data synchronisation and managing achievements.
- * Requires the role "admin".
- */
 @Path("/api/admin")
 @Produces(MediaType.APPLICATION_JSON)
 @RolesAllowed("admin")
@@ -35,10 +31,6 @@ public class AdminResource {
     @Inject
     AchievementService achievementService;
 
-    /**
-     * Triggers an immediate carbon data sync for the recent months, the same as the
-     * scheduled sync does.
-     */
     @POST
     @Path("/sync")
     @Operation(summary = "Trigger carbon data sync",
@@ -51,11 +43,6 @@ public class AdminResource {
                 .build();
     }
 
-    /**
-     * Triggers a carbon data sync for a specific period.
-     *
-     * @param period Period in YYYY-MM format.
-     */
     @POST
     @Path("/sync/{period}")
     @Operation(summary = "Trigger carbon data sync for a specific period")
@@ -74,12 +61,6 @@ public class AdminResource {
                 .build();
     }
 
-    /**
-     * Grants a custom achievement to a team (IT leadership shoutout).
-     *
-     * @param teamId  Target team ID.
-     * @param request Achievement details.
-     */
     @POST
     @Path("/teams/{teamId}/achievements")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -100,9 +81,7 @@ public class AdminResource {
         return Response.status(Response.Status.CREATED).entity(AchievementDto.from(achievement)).build();
     }
 
-    /** Simple response wrapper. */
     public record SyncResponse(String message) {}
 
-    /** Request body for granting a custom achievement. */
     public record AchievementRequest(String title, String description, String badgeIcon) {}
 }
