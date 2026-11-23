@@ -58,3 +58,11 @@ export interface LeaderboardSummary {
   /** Periods up to and including `period`, oldest first. */
   history: HistoryPoint[];
 }
+
+/** The logged-in user. */
+export interface User {
+  /** Null if nobody is logged in, which only happens in dev mode. */
+  name: string | null;
+  /** The roles of this application: "user", "admin". */
+  roles: string[];
+}

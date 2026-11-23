@@ -4,11 +4,12 @@
 # ${NAME:default} reads the environment variable (or property) NAME and falls
 # back to default; ${NAME} without a default is required, so the application
 # refuses to start without it.
-# The database file, the Keycloak URL and credentials and the teams file are
-# only configured in %prod, without defaults, so production never falls back
-# to a local, insecure or sample value. Dev mode stores the database in a file
-# under ./data and Quarkus Dev Services provide Keycloak; tests use an H2
-# in-memory database and no Keycloak. Dev mode and tests use the sample teams.
+# The database file, the identity provider's URL and client secret and the
+# teams file are only configured in %prod, without defaults, so production
+# never falls back to a local, insecure or sample value. Dev mode stores the
+# database in a file under ./data and Quarkus Dev Services provide Keycloak as
+# identity provider; tests use an H2 in-memory database and no identity
+# provider. Dev mode and tests use the sample teams.
 # =============================================================================
 
 quarkus:
@@ -44,16 +45,57 @@ quarkus:
     locations: classpath:db/migration
 
   # ---------------------------------------------------------------------------
-  # OIDC – Keycloak (server URL and client secret in %prod)
-  # TLS certificates are always verified. If Keycloak uses a certificate of an
-  # internal CA, add the CA to a truststore of the TLS registry and reference it
-  # via quarkus.oidc.tls.tls-configuration-name instead of disabling the check.
+  # OIDC – the identity provider: Keycloak or another OpenID Connect provider
+  # (issuer URL and client secret in %prod). The README lists what other
+  # providers need.
+  # TLS certificates are always verified. If the identity provider uses a
+  # certificate of an internal CA, add the CA to a truststore of the TLS
+  # registry and reference it via quarkus.oidc.tls.tls-configuration-name
+  # instead of disabling the check.
   # ---------------------------------------------------------------------------
   oidc:
-    client-id: ${KEYCLOAK_CLIENT_ID:green-champions}
-    # Read the user's roles from the access token
+    # Browsers log in with the authorization code flow: Quarkus redirects them
+    # to the identity provider and keeps the tokens in an encrypted session
+    # cookie, so the frontend never handles a token. Requests with an
+    # "Authorization: Bearer" header, e.g. of scripts calling the admin API,
+    # are authenticated by it.
+    application-type: hybrid
+    client-id: ${OIDC_CLIENT_ID:green-champions}
     roles:
+      # Read the user's roles from the access token, as Keycloak puts its realm
+      # roles only there. Providers whose access token isn't meant for this
+      # application, e.g. Entra ID, need QUARKUS_OIDC_ROLES_SOURCE=idtoken.
       source: accesstoken
+      # Where the providers put the roles: groups (e.g. Okta, authentik),
+      # realm_access.roles (Keycloak's realm roles) and roles (Microsoft Entra
+      # ID's app roles)
+      role-claim-path: groups,realm_access/roles,roles
+    authentication:
+      # fetch() cannot follow a redirect to the identity provider, so the
+      # frontend's requests (marked with X-Requested-With: JavaScript) get the
+      # status 499 instead when the session has expired. The frontend then
+      # reloads the page, which redirects to the identity provider and, while
+      # the provider's own session is still active, straight back without
+      # asking for the password.
+      java-script-auto-redirect: false
+      # How long the session outlives the ID token, as long as Keycloak's
+      # default SSO Session Idle (30 min), during which its refresh token is valid
+      session-age-extension: 30M
+    token:
+      # Renew expired tokens of the session with the refresh token, rather
+      # than ending the session when the ID token expires (Keycloak: 5 min)
+      refresh-expired: true
+      # Expected audiences (aud) of the access tokens, comma-separated, only
+      # checked if set. Needed if other applications' tokens come from the same
+      # issuer, e.g. with Entra ID, see README. Also applies to the access token
+      # of the login and replaces the client ID as the expected audience of the
+      # ID tokens.
+      audience: ${OIDC_AUDIENCE:}
+    logout:
+      # Logs out of the application and of the identity provider, then returns
+      # to the dashboard, which leads to the provider's login again
+      path: /logout
+      post-logout-path: /
 
   # ---------------------------------------------------------------------------
   # Quinoa – builds the Lit frontend and serves it from this application. In
@@ -76,6 +118,26 @@ quarkus:
   # ---------------------------------------------------------------------------
   http:
     port: 8080
+    # Who may access which path, before the REST endpoints check the roles.
+    # The most specific path wins.
+    auth:
+      permission:
+        # Everything requires a login, the frontend as well, so that opening
+        # the dashboard redirects to the identity provider
+        authenticated:
+          paths: /*
+          policy: authenticated
+        # The admin API only accepts access tokens, not the session cookie of
+        # the frontend, so that no other website can make the browser of a
+        # logged-in admin call it (CSRF)
+        admin-api:
+          paths: /api/admin/*
+          policy: authenticated
+          auth-mechanism: bearer
+        # Health checks of the container platform or load balancer
+        health:
+          paths: /q/health,/q/health/*
+          policy: permit
 
   # ---------------------------------------------------------------------------
   # REST clients of the Azure and GCP APIs (AWS is called via its SDK)
@@ -138,7 +200,7 @@ carbon:
     months: ${CARBON_HISTORY_MONTHS:13}
 
 # =============================================================================
-# Production profile – database file, Keycloak URL and credentials, teams file
+# Production profile – database file, identity provider, teams file
 # =============================================================================
 "%prod":
   quarkus:
@@ -157,17 +219,20 @@ carbon:
       jdbc:
         url: jdbc:h2:file:${DB_FILE}
 
+    # Issuer URL of the identity provider, to which Quarkus appends
+    # /.well-known/openid-configuration, e.g.
+    # https://keycloak.example.com/realms/green-software
     oidc:
-      auth-server-url: ${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM:green-software}
+      auth-server-url: ${OIDC_ISSUER_URL}
       credentials:
-        secret: ${KEYCLOAK_SECRET}
+        secret: ${OIDC_CLIENT_SECRET}
 
 # =============================================================================
 # Test profile
 # H2 in-memory instead of file database, so every test run starts empty, and
-# no Keycloak. The cloud providers (even if enabled via environment variables)
-# and the scheduler are disabled and the REST clients point to a dummy URL, so
-# tests never call a real cloud API.
+# no identity provider. The cloud providers (even if enabled via environment
+# variables) and the scheduler are disabled and the REST clients point to a
+# dummy URL, so tests never call a real cloud API.
 # =============================================================================
 "%test":
   cloud:
@@ -198,7 +263,7 @@ carbon:
 # =============================================================================
 # Dev profile
 # Quarkus Dev Services start Keycloak in a container (Docker or Podman), as no
-# Keycloak URL is configured outside %prod.
+# issuer URL is configured outside %prod.
 # =============================================================================
 "%dev":
   quarkus:
@@ -239,8 +304,7 @@ carbon:
         "io.retit.greensoftware":
           level: DEBUG
 
-    # Security checks are disabled in dev mode, so the API can be used without
-    # logging in
     security:
       auth:
+        # To disable authentication in dev mode change this to true
         enabled-in-dev-mode: false

@@ -8,7 +8,9 @@ import type {
   HistoryPoint,
   LeaderboardEntry,
   LeaderboardSummary,
+  User,
 } from "../types.ts";
+import { AccessDeniedError, apiFetch } from "../util/api.ts";
 import {
   formatCo2,
   formatPeriod,
@@ -60,8 +62,8 @@ export class GscApp extends LitElement {
       const query = period ? `?period=${encodeURIComponent(period)}` : "";
       try {
         const [lbRes, sumRes] = await Promise.all([
-          fetch(`/api/leaderboard${query}`, { signal }),
-          fetch(`/api/leaderboard/summary${query}`, { signal }),
+          apiFetch(`/api/leaderboard${query}`, signal),
+          apiFetch(`/api/leaderboard/summary${query}`, signal),
         ]);
         if (!lbRes.ok)
           throw new Error(`Leaderboard fetch failed: ${lbRes.status}`);
@@ -74,6 +76,8 @@ export class GscApp extends LitElement {
         };
       } catch (err) {
         signal.throwIfAborted();
+        // No demo data for a user without access, who would take it for real
+        if (err instanceof AccessDeniedError) throw err;
         return {
           ...this._demoData(period || this._fallbackPeriod()),
           error:
@@ -83,6 +87,17 @@ export class GscApp extends LitElement {
       }
     },
     args: () => [this.period] as const,
+  });
+
+  /** The logged-in user, shown with the logout link once loaded. */
+  private _userTask = new Task(this, {
+    task: async (_args, { signal }): Promise<User> => {
+      const response = await apiFetch("/api/me", signal);
+      if (!response.ok)
+        throw new Error(`User fetch failed: ${response.status}`);
+      return response.json();
+    },
+    args: () => [] as const,
   });
 
   /** The period shown: the selected one, or else the one the backend chose. */
@@ -316,6 +331,22 @@ export class GscApp extends LitElement {
     `;
   }
 
+  /**
+   * The logged-in user and the logout link. Nothing while loading, or without a
+   * login, as in dev mode, where the security checks are off.
+   */
+  private _renderUser() {
+    const name = this._userTask.value?.name;
+    if (!name) return nothing;
+    return html`
+      <div class="user">
+        <span class="user-name" title="Logged in as ${name}">👤 ${name}</span>
+        <!-- Handled by Quarkus: ends the session here and at the identity provider -->
+        <a class="logout" href="/logout">Log out</a>
+      </div>
+    `;
+  }
+
   override render() {
     return html`
       <!-- Navigation Bar -->
@@ -377,14 +408,17 @@ export class GscApp extends LitElement {
           </button>
         </nav>
 
-        <div class="period-selector">
-          <label for="period">Period</label>
-          <input
-            type="month"
-            id="period"
-            .value="${live(this._shownPeriod)}"
-            @change="${this._onPeriodChange}"
-          />
+        <div class="header-end">
+          <div class="period-selector">
+            <label for="period">Period</label>
+            <input
+              type="month"
+              id="period"
+              .value="${live(this._shownPeriod)}"
+              @change="${this._onPeriodChange}"
+            />
+          </div>
+          ${this._renderUser()}
         </div>
       </header>
 
@@ -532,6 +566,13 @@ export class GscApp extends LitElement {
       box-shadow: inset 0 0 0 1px var(--retit-on-dark-border);
     }
 
+    /* Period selector and user, on the right */
+    .header-end {
+      display: flex;
+      align-items: center;
+      gap: 1.5em;
+    }
+
     /* Period selector */
     .period-selector {
       display: flex;
@@ -567,6 +608,38 @@ export class GscApp extends LitElement {
         var(--retit-white) 15%,
         var(--retit-on-dark-fill)
       );
+    }
+
+    /* Logged-in user */
+    .user {
+      display: flex;
+      align-items: center;
+      gap: 0.75em;
+      font-size: 0.8em;
+      line-height: 1;
+      color: var(--retit-on-dark-text-muted);
+    }
+
+    .user-name {
+      max-width: 12em;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .logout {
+      color: var(--retit-white);
+      text-decoration: none;
+      border: 1px solid var(--retit-on-dark-border);
+      border-radius: 4px;
+      padding: 0.35em 0.75em;
+      white-space: nowrap;
+      transition: background-color 0.2s ease;
+    }
+
+    .logout:hover,
+    .logout:focus-visible {
+      background-color: var(--retit-on-dark-fill);
     }
 
     /* ── Hero section ───────────────────────────────────── */

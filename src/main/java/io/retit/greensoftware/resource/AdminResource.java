@@ -21,11 +21,10 @@ import java.time.format.DateTimeParseException;
 
 /**
  * Admin-only REST resource for triggering data synchronisation and managing achievements.
- * Requires the "admin" Keycloak role.
+ * Requires the role "admin".
  */
 @Path("/api/admin")
 @Produces(MediaType.APPLICATION_JSON)
-@Consumes(MediaType.APPLICATION_JSON)
 @RolesAllowed("admin")
 @Tag(name = "Admin", description = "Administrative endpoints (requires admin role)")
 public class AdminResource {
@@ -83,6 +82,7 @@ public class AdminResource {
      */
     @POST
     @Path("/teams/{teamId}/achievements")
+    @Consumes(MediaType.APPLICATION_JSON)
     @Transactional
     @Operation(summary = "Grant a custom achievement to a team",
                description = "Allows IT leadership to award a custom achievement (shoutout) to any team.")

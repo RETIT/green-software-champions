@@ -28,8 +28,8 @@ GCP provider, based on the Carbon Footprint export to BigQuery, and the Azure
 provider are under development.
 
 **Tech stack:** Quarkus 3 (Java 25), H2 (embedded, file-based) with Flyway,
-Keycloak via OIDC, and a Lit + TypeScript frontend built with Vite and served by
-Quarkus through Quinoa.
+login via OpenID Connect (e.g. Keycloak), and a Lit + TypeScript frontend built
+with Vite and served by Quarkus through Quinoa.
 
 ## Prerequisites
 
@@ -61,7 +61,9 @@ Then open <http://localhost:8080>. On the first start this:
   achievements, as no cloud provider is enabled.
 
 Security checks are off in dev mode, so you don't need to log in, neither in the
-UI nor for the API. Code changes in Java and TypeScript are reloaded live.
+UI nor for the API. To try the login, start dev mode with
+`QUARKUS_SECURITY_AUTH_ENABLED_IN_DEV_MODE=true mvn quarkus:dev` and log in as
+`developer` or `admin`. Code changes in Java and TypeScript are reloaded live.
 
 | URL                                   | What                               |
 |---------------------------------------|------------------------------------|
@@ -155,14 +157,14 @@ it with `java -jar target/quarkus-app/quarkus-run.jar`; the whole
 for every push to `main` and every pull request and keeps it as a build
 artifact for 30 days.
 
-Outside dev mode, the teams file, the database and Keycloak have to be
-configured:
+Outside dev mode, the teams file, the database and the identity provider have
+to be configured:
 
 ```bash
 export TEAMS_FILE=/etc/green-champions/teams.yaml   # see "Teams file"
 export DB_FILE=/var/lib/green-champions/greensoft   # H2 file, without .mv.db
-export KEYCLOAK_URL=https://keycloak.example.com    # without /realms/…
-export KEYCLOAK_SECRET=<client secret>
+export OIDC_ISSUER_URL=https://keycloak.example.com/realms/green-software
+export OIDC_CLIENT_SECRET=<client secret>
 export AWS_ENABLED=true
 java -jar target/quarkus-app/quarkus-run.jar
 ```
@@ -171,14 +173,98 @@ java -jar target/quarkus-app/quarkus-run.jar
 and its directories on the first start, and only one process can open it at a
 time.
 
-Keycloak needs a realm (`green-software` by default) with a confidential
-client (`green-champions` by default) and the realm roles `user`, for reading
-the leaderboard, and `admin`, for the admin API.
+### Identity provider (OIDC)
 
-> [!NOTE]
-> The login of the dashboard is under development. Until it's available, use
-> dev mode to see the dashboard with real data. Outside dev mode, the API
-> accepts requests with a Keycloak access token.
+The dashboard redirects to an OpenID Connect provider for the login and keeps
+the session in an encrypted cookie. `OIDC_ISSUER_URL` is the provider's issuer,
+to which `/.well-known/openid-configuration` is appended. The provider needs:
+
+- a client (`OIDC_CLIENT_ID`, `green-champions` by default) with a secret
+  (`OIDC_CLIENT_SECRET`) for the authorization code flow, with the
+  application's URL, e.g. `https://champions.example.com/*`, as redirect URI
+  and `https://champions.example.com/` as post-logout redirect URI,
+- the roles `user`, for the dashboard, and `admin`, for the admin API, in its
+  tokens (see [Other providers](#other-providers)).
+
+Users without the role `user` can log in, but are told that they have no
+access. The admin API only accepts access tokens, not the dashboard's session
+(see [Admin API](#admin-api)).
+
+Behind a reverse proxy that terminates TLS, also set
+`QUARKUS_HTTP_PROXY_PROXY_ADDRESS_FORWARDING=true` and
+`QUARKUS_HTTP_PROXY_ENABLE_FORWARDED_HOST=true`, so that the application sends
+the identity provider its public `https://` URL as redirect URI. Only set them
+behind a proxy that overwrites the `X-Forwarded-*` headers.
+
+#### Keycloak
+
+Keycloak needs a realm, e.g. `green-software`, whose URL
+`https://keycloak.example.com/realms/green-software` is `OIDC_ISSUER_URL`, with:
+
+- the client, with *Client authentication* and the *Standard flow* enabled,
+  and the URLs above as *Valid redirect URI* and *Valid post logout redirect
+  URI*,
+- the realm roles `user` and `admin`.
+
+Nothing else needs to be configured. Use a realm of its own, as every access
+token of the realm with the role `admin` is accepted by the admin API (see
+`OIDC_AUDIENCE` below).
+
+#### Other providers
+
+The application is developed against Keycloak; the settings below follow the
+other providers' documentation and are untested. The application reads the
+roles from the access token, from the claims `groups` (e.g. Okta, authentik),
+`realm_access.roles` (Keycloak) and `roles` (the app roles of Microsoft Entra
+ID). Depending on the provider, also set:
+
+| Setting                                  | When                                                                                                                                                                                                                       |
+|------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `QUARKUS_OIDC_ROLES_SOURCE=idtoken`      | The access token of the login isn't meant for this application, so it can't be verified: Entra ID (it's for Microsoft Graph), Okta's org authorization server, Auth0 (opaque). The provider must put the roles in the ID token. |
+| `QUARKUS_OIDC_ROLES_ROLE_CLAIM_PATH`     | The roles are in another claim, e.g. one an Auth0 Action adds. Replaces the three claims above.                                                                                                                            |
+| [roles mapping](#roles-mapping)          | The roles have other names, e.g. groups of the whole organisation or the group IDs of Entra ID.                                                                                                                             |
+| `QUARKUS_OIDC_AUTHENTICATION_SCOPES`     | Further scopes, comma-separated: `offline_access` for refresh tokens (all but Keycloak, which issues them anyway), `profile` for the user name (Entra ID), `groups` (Okta).                                               |
+| `OIDC_AUDIENCE`                          | Other applications' tokens come from the same issuer, e.g. all apps of an Entra ID tenant. See below.                                                                                                                     |
+| `QUARKUS_OIDC_TOKEN_PRINCIPAL_CLAIM`     | The tokens have neither `upn` nor `preferred_username`, so the dashboard would show the `sub` claim as user name, e.g. with Auth0: set it to `email`.                                                                      |
+| `QUARKUS_OIDC_END_SESSION_PATH`          | The provider's discovery document has no `end_session_endpoint`, needed for the logout.                                                                                                                                    |
+
+Without a refresh token, the login session ends with the ID token. The
+dashboard then reloads, which leads through the provider's login back to it
+without asking for the password while the provider's own session is active.
+Don't request `offline_access` from Keycloak, whose offline tokens outlive the
+Keycloak session.
+
+**Audience:** the admin API accepts any access token of the issuer with the
+role `admin`, unless `OIDC_AUDIENCE` lists the audiences (`aud` claim),
+comma-separated, of which the tokens must have one. With Entra ID, the issuer
+is the whole tenant, so a token for another application of the tenant with an
+app role `admin` would be accepted: set `OIDC_AUDIENCE` to the application's
+client ID, the audience of its ID tokens and of the access tokens for its own
+API. Once set, every token the application gets must match it: the ID tokens,
+whose audience is otherwise checked against the client ID, the access tokens of
+scripts and, as long as the roles are read from it, the access token of the
+login.
+
+**Not supported:** ZITADEL's roles claim is an object rather than a list,
+which Quarkus can't read, and providers without roles, e.g. Google, can't tell
+users from admins.
+
+#### Roles mapping
+
+If the provider's roles or groups have other names, map them to `user` and
+`admin` in a config file, `config/application.yaml` in the directory the
+application is started in:
+
+```yaml
+quarkus:
+  http:
+    auth:
+      roles-mapping:
+        # name or ID of the provider's role or group: roles of the application
+        "GSC-Users": user
+        "GSC-Admins": admin,user
+        "3fa85f64-5717-4562-b3fc-2c963f66afa6": user   # Entra ID group ID
+```
 
 ## Configuration
 
@@ -189,10 +275,10 @@ and can be overridden with these environment variables:
 |------------------------------------------------|--------------------|----------------------------------------------------------------------|
 | `TEAMS_FILE`                                   | –                  | Path of the teams file; required outside dev mode                    |
 | `DB_FILE`                                      | `./data/greensoft` in dev mode | Path of the H2 database file without `.mv.db`; required outside dev mode |
-| `KEYCLOAK_URL`                                 | –                  | Keycloak base URL; required outside dev mode                         |
-| `KEYCLOAK_SECRET`                              | –                  | Client secret; required outside dev mode                             |
-| `KEYCLOAK_REALM`                               | `green-software`   | Keycloak realm                                                       |
-| `KEYCLOAK_CLIENT_ID`                           | `green-champions`  | Keycloak client                                                      |
+| `OIDC_ISSUER_URL`                              | –                  | Issuer URL of the identity provider; required outside dev mode       |
+| `OIDC_CLIENT_SECRET`                           | –                  | Client secret; required outside dev mode                             |
+| `OIDC_CLIENT_ID`                               | `green-champions`  | Client ID                                                            |
+| `OIDC_AUDIENCE`                                | –                  | Required audience of access tokens, see [Other providers](#other-providers) |
 | `AWS_ENABLED`                                  | `false`            | Fetch carbon data from AWS                                           |
 | `AWS_REGION`                                   | `us-east-1`        | Region of the AWS Sustainability API endpoint                        |
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`   | –                  | Static AWS credentials; otherwise the default credentials chain      |
@@ -247,8 +333,11 @@ curl -X POST http://localhost:8080/api/admin/teams/1/achievements \
 ```
 
 The team IDs are listed by `GET /api/leaderboard/teams`. Outside dev mode, add
-`-H "Authorization: Bearer $TOKEN"` with an access token of a Keycloak user
-with the `admin` role.
+`-H "Authorization: Bearer $TOKEN"` with an access token of the identity
+provider for a user or service account with the `admin` role. The admin API
+doesn't accept the session cookie of the dashboard, so that no other website
+can make a logged-in admin's browser call it (CSRF); without a token, it
+redirects to the login.
 
 ## Tests
 
@@ -258,7 +347,8 @@ mvn test
 
 The tests use an in-memory H2 database and the sample teams. Keycloak, the
 cloud providers and the scheduler are disabled, so no network, container
-runtime or Node.js is needed. Only the tests of the GCP provider enable it,
+runtime or Node.js is needed. Only `SecurityTest` enables OIDC, against a fake
+OIDC server (WireMock), and logs in through its login form with HtmlUnit. Only the tests of the GCP provider enable it,
 against a fake of the BigQuery API and Google's token endpoint that the
 application under test serves itself. As it only serves the fake once started,
 these tests turn off the check of the export and the sync at startup, and call
