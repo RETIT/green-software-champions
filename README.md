@@ -23,6 +23,10 @@ ranks the teams, shows their history and awards achievements for reductions.
   Months of different length are compared by their daily averages. Admins can
   also grant custom achievements ("shoutouts") through the API.
 
+**Sample data:** to try it without a cloud account, dev mode generates sample
+emissions for the teams and evaluates their achievements, as long as no cloud
+provider is enabled (see [Sample data](#sample-data)).
+
 **Cloud providers:** AWS is supported through the AWS Sustainability API. The
 GCP provider, based on the Carbon Footprint export to BigQuery, and the Azure
 provider are under development.
@@ -57,8 +61,8 @@ Then open <http://localhost:8080>. On the first start this:
 - creates the H2 database in `./data/greensoft.mv.db`,
 - creates the four sample teams from
   [`sample-teams.yaml`](src/main/resources/sample-teams.yaml),
-- seeds 14 months of generated sample emissions for them and evaluates the
-  achievements, as no cloud provider is enabled.
+- seeds 14 months of generated [sample data](#sample-data) for them and
+  evaluates the achievements, as no cloud provider is enabled.
 
 Security checks are off in dev mode, so you don't need to log in, neither in the
 UI nor for the API. To try the login, start dev mode with
@@ -90,9 +94,40 @@ Ryuk, the Testcontainers cleanup container, doesn't work with rootless Podman;
 the repository already disables it in
 [`testcontainers.properties`](src/main/resources/testcontainers.properties).
 
+## Sample data
+
+Dev mode seeds sample emissions at every start in which no cloud provider is
+enabled, i.e. none of `AWS_ENABLED`, `GCP_ENABLED` and `AZURE_ENABLED` is
+`true`, also not in the `.env` file. The packaged application and the tests
+never seed any.
+
+- **Teams:** every team in the database, the sample teams or those of your own
+  [teams file](#teams-file), with values only for the providers each team has
+  projects with. So you can see your own teams on the dashboard before
+  connecting a cloud account.
+- **Months:** `CARBON_HISTORY_MONTHS` + 1, 14 by default, ending with the
+  previous month, so that the oldest month in the charts can be compared with
+  the one before.
+- **Values:** 40 to 220 kg CO₂e per provider in the latest month, with a trend
+  between 1.5 % growth and 5 % reduction per month and some noise on top. They
+  are random, but derived from the team name, so a team gets the same curve at
+  every start.
+- **Achievements** are evaluated like after a sync, for every month that all
+  teams have data for.
+
+Existing entries are never changed: each start only adds the missing months,
+e.g. a new team's or, at the turn of the month, the new previous month, which
+continues each team's curve. To generate all of it anew, e.g. after changing
+the projects of a team, stop Quarkus and run `rm -rf data`.
+
+Once a provider is enabled, nothing is seeded any more, but the sample data
+already in the database stays: a sync overwrites the sample values of the
+months it fetches, but neither the older months nor the achievements already
+awarded for them. So delete the database before switching to real data.
+
 ## Using real AWS data
 
-The sample data is only seeded while no provider is enabled. As soon as one is,
+The [sample data](#sample-data) is only seeded while no provider is enabled. As soon as one is,
 the application fetches the last 12 months from it at every startup (startup
 waits for this) and again at 02:00 on the 25th of every month. AWS publishes a
 month's data around the 21st of the following month.
@@ -363,6 +398,10 @@ the check themselves.
 - **"Database may be already in use":** another process, e.g. a second dev
   mode or the packaged application, has the H2 file open. Stop it, or give
   one of them a different `DB_FILE`.
+- **No sample data in dev mode:** a cloud provider is enabled, e.g. through
+  `AWS_ENABLED=true` in the `.env` file, so dev mode syncs instead.
+- **Sample data next to real data:** the database still holds the sample data
+  of an earlier dev mode start. Stop Quarkus and run `rm -rf data`.
 - **Startup takes long with a provider enabled:** startup waits for the
   initial sync of `CARBON_SYNC_MONTHS` months.
 - **A month is missing for a team:** a month is only stored once every
