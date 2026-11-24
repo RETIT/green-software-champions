@@ -140,17 +140,9 @@ month's data around the 21st of the following month.
    Organization only sees its own data; to query several accounts, use the
    management account.
 
-2. **Teams.** Tell the application which AWS accounts belong to which team,
-   either by setting the account IDs of the sample teams …
-
-   ```bash
-   export ALPHA_AWS_PROJECT=123456789012   # Team Alpha
-   export BETA_AWS_PROJECT=234567890123    # Team Beta
-   export DELTA_AWS_PROJECT=345678901234   # Team Delta
-   ```
-
-   … or by writing your own [teams file](#teams-file) and pointing dev mode
-   at it, which replaces the sample teams:
+2. **Teams.** Tell the application which AWS accounts belong to which team by
+   writing your own [teams file](#teams-file) and pointing dev mode at it,
+   which replaces the sample teams:
 
    ```bash
    export QUARKUS_CONFIG_LOCATIONS=$PWD/my-teams.yaml
