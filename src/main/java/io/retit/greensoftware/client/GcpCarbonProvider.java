@@ -2,13 +2,17 @@ package io.retit.greensoftware.client;
 
 import io.retit.greensoftware.config.CloudProvidersConfig;
 import io.retit.greensoftware.entity.CloudProject;
+import io.retit.greensoftware.util.PeriodRange;
+import io.retit.greensoftware.util.Periods;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.jboss.logging.Logger;
 
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.nio.charset.StandardCharsets;
@@ -19,14 +23,9 @@ import com.google.auth.oauth2.GoogleCredentials;
 import com.google.auth.oauth2.ServiceAccountCredentials;
 
 /**
- * GCP Carbon Footprint data provider.
- *
- * <p>Connects to the Google Cloud Carbon Footprint API to retrieve CO2-equivalent
- * emissions data per GCP project.
- *
- * <p><b>Authentication:</b> GCP uses OAuth2 service account credentials. Configure
- * {@code cloud.gcp.credentials-file} to point to a service account JSON key file, or
- * use Application Default Credentials (ADC) when running on GCP infrastructure.
+ * Project IDs are GCP project IDs. Authenticates via the metadata server when running
+ * on GCP, otherwise with the service account key of {@code cloud.gcp.credentials-json}
+ * or {@code cloud.gcp.credentials-file}.
  *
  * @see <a href="https://cloud.google.com/carbon-footprint/docs/reference/rest">
  *      GCP Carbon Footprint API</a>
@@ -49,25 +48,27 @@ public class GcpCarbonProvider implements CarbonProvider {
     }
 
     @Override
-    public List<CarbonData> fetchCarbonData(List<CloudProject> projects, String period) {
+    public Map<String, List<CarbonData>> fetchCarbonData(List<CloudProject> projects, PeriodRange range) {
         if (!isEnabled()) {
             LOG.debug("GCP carbon provider is disabled; returning empty data.");
-            return List.of();
+            return Map.of();
         }
 
         String accessToken = acquireAccessToken();
         if (accessToken == null) {
-            LOG.warn("Could not acquire GCP access token; skipping GCP carbon sync.");
-            return List.of();
+            throw new CarbonDataUnavailableException("Could not acquire GCP access token.");
         }
 
+        // One request per project and month
+        return CarbonProvider.fetchEachPeriod(range, period -> fetchPeriod(projects, period, accessToken));
+    }
+
+    /** @throws CarbonDataUnavailableException if any project's data could not be fetched */
+    private List<CarbonData> fetchPeriod(List<CloudProject> projects, String period, String accessToken) {
         List<CarbonData> results = new ArrayList<>();
-        String[] parts = period.split("-");
-        // GCP Carbon Footprint API uses YYYY-MM-DD ranges
-        String startDate = period + "-01";
-        java.time.YearMonth ym = java.time.YearMonth.of(
-                Integer.parseInt(parts[0]), Integer.parseInt(parts[1]));
-        String endDate = period + "-" + ym.lengthOfMonth();
+        YearMonth ym = Periods.toYearMonth(period);
+        String startDate = ym.atDay(1).toString();
+        String endDate = ym.atEndOfMonth().toString();
 
         for (CloudProject project : projects) {
             try {
@@ -82,21 +83,19 @@ public class GcpCarbonProvider implements CarbonProvider {
                 double co2Kg = extractTotalCo2Kg(response);
                 results.add(new CarbonData(project.projectId, co2Kg));
             } catch (Exception e) {
-                LOG.warnf("Failed to fetch GCP carbon data for project %s: %s",
-                        project.projectId, e.getMessage());
+                throw new CarbonDataUnavailableException(String.format(
+                        "Failed to fetch GCP carbon data for project %s, period %s: %s",
+                        project.projectId, period, e.getMessage()), e);
             }
         }
         return results;
     }
 
-    /**
-     * Acquires a GCP access token using the configured service account credentials
-     * or Application Default Credentials.
-     */
+    /** Null if no token could be obtained. */
     private String acquireAccessToken() {
         CloudProvidersConfig.GcpConfig gcpConfig = config.gcp();
         try {
-            // When running on GCP, use the metadata server for ADC
+            // Only reachable when running on GCP
             java.net.http.HttpClient httpClient = java.net.http.HttpClient.newHttpClient();
             java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
                     .uri(java.net.URI.create(
@@ -119,20 +118,17 @@ public class GcpCarbonProvider implements CarbonProvider {
         }
 
         try {
-            // If the config contains raw JSON credentials, prefer that (no file required)
             if (!gcpConfig.credentialsJson().isEmpty()) {
                 String json = gcpConfig.credentialsJson().get();
                 LOG.info("Using GCP service account credentials from configuration (JSON).");
                 try (ByteArrayInputStream is = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))) {
                     GoogleCredentials creds = ServiceAccountCredentials.fromStream(is)
                             .createScoped(Collections.singleton("https://www.googleapis.com/auth/cloud-platform"));
-                    // Refresh to obtain an access token
                     AccessToken token = creds.refreshAccessToken();
                     return token != null ? token.getTokenValue() : null;
                 }
             }
 
-            // If a credentials file path is configured, load it
             if (!gcpConfig.credentialsFile().isEmpty()) {
                 String path = gcpConfig.credentialsFile().get();
                 LOG.infof("Using GCP service account key file: %s", path);
@@ -150,10 +146,10 @@ public class GcpCarbonProvider implements CarbonProvider {
     }
 
     private double extractTotalCo2Kg(GcpCarbonApiClient.CarbonFootprintResponse response) {
-        if (response == null || response.carbonFootprintSummary() == null) {
-            return 0.0;
+        // No rows means not published yet (up to weeks after the month), not zero emissions
+        if (response == null || response.carbonFootprintSummary() == null || response.carbonFootprintSummary().isEmpty()) {
+            throw new CarbonDataUnavailableException("No data published yet");
         }
-        // GCP API returns kg of CO2e directly
         return response.carbonFootprintSummary().stream()
                 .mapToDouble(s -> s.kgCO2e() != null ? s.kgCO2e() : 0.0)
                 .sum();

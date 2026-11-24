@@ -1,52 +1,103 @@
 package io.retit.greensoftware.client;
 
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.core.MediaType;
-import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
+import io.retit.greensoftware.config.CloudProvidersConfig;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import org.jboss.logging.Logger;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.sustainability.SustainabilityClient;
+import software.amazon.awssdk.services.sustainability.SustainabilityClientBuilder;
+import software.amazon.awssdk.services.sustainability.model.Dimension;
+import software.amazon.awssdk.services.sustainability.model.Emissions;
+import software.amazon.awssdk.services.sustainability.model.EmissionsType;
+import software.amazon.awssdk.services.sustainability.model.EstimatedCarbonEmissions;
+import software.amazon.awssdk.services.sustainability.model.GetEstimatedCarbonEmissionsRequest;
+import software.amazon.awssdk.services.sustainability.model.TimeGranularity;
 
+import java.time.Instant;
+import java.time.YearMonth;
+import java.time.ZoneOffset;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
- * MicroProfile REST Client for the AWS Carbon Footprint API.
+ * Client for the AWS Sustainability API. The identity needs the IAM action
+ * {@code sustainability:GetEstimatedCarbonEmissions}. The SDK client is only built on
+ * first use, so nothing is set up while the AWS provider is disabled.
  *
- * <p>Base URL is configured via {@code quarkus.rest-client.aws-carbon-api.url} in
- * application.yaml (defaults to the value of {@code cloud.aws.endpoint}).
- *
- * <p><b>Important:</b> AWS requires SigV4 request signing. In production, register a
- * {@code ClientRequestFilter} that adds the {@code Authorization}, {@code x-amz-date},
- * and {@code x-amz-security-token} headers using the configured credentials.
- *
- * @see <a href="https://docs.aws.amazon.com/aws-cost-management/latest/APIReference/API_CarbonFootprint.html">
- *      AWS Carbon Footprint API</a>
+ * @see <a href="https://docs.aws.amazon.com/sustainability/latest/APIReference/API_GetEstimatedCarbonEmissions.html">
+ *      GetEstimatedCarbonEmissions</a>
  */
-@RegisterRestClient(configKey = "aws-carbon-api")
-@Path("/")
-public interface AwsCarbonApiClient {
+@ApplicationScoped
+public class AwsCarbonApiClient {
+
+    private static final Logger LOG = Logger.getLogger(AwsCarbonApiClient.class);
+
+    /** Location-based. AWS also reports market-based emissions, so summing all would count them twice. */
+    private static final EmissionsType EMISSIONS_TYPE = EmissionsType.TOTAL_LBM_CARBON_EMISSIONS;
+
+    @Inject
+    CloudProvidersConfig config;
+
+    private SustainabilityClient client;
+
+    @PostConstruct
+    void init() {
+        CloudProvidersConfig.AwsConfig aws = config.aws();
+        SustainabilityClientBuilder builder = SustainabilityClient.builder()
+                .region(Region.of(aws.region()))
+                .httpClientBuilder(UrlConnectionHttpClient.builder());
+        if (aws.accessKey().isPresent() && aws.secretKey().isPresent()) {
+            builder.credentialsProvider(StaticCredentialsProvider.create(
+                    AwsBasicCredentials.create(aws.accessKey().get(), aws.secretKey().get())));
+        }
+        client = builder.build();
+    }
+
+    @PreDestroy
+    void close() {
+        client.close();
+    }
 
     /**
-     * Retrieve carbon footprint summary for one billing account.
+     * The estimated emissions of {@code accountIds} (not empty) in each month from
+     * {@code first} to {@code last}, both inclusive.
      *
-     * @param billingAccountId AWS account ID (12-digit number).
-     * @param startTime        ISO-8601 start timestamp (inclusive).
-     * @param endTime          ISO-8601 end timestamp (inclusive).
-     * @param unit             Unit for the response values (e.g., "METRIC_TON").
-     * @return Carbon footprint response from the AWS API.
+     * @return metric tons of CO2e by month and account ID; months and accounts without
+     *         data are missing
      */
-    @GET
-    @Path("GetCarbonFootprintSummary")
-    @Produces(MediaType.APPLICATION_JSON)
-    CarbonFootprintResponse getCarbonFootprintSummary(
-            @QueryParam("billingAccountId") String billingAccountId,
-            @QueryParam("startTime") String startTime,
-            @QueryParam("endTime") String endTime,
-            @QueryParam("unit") String unit);
+    public Map<YearMonth, Map<String, Double>> getEstimatedEmissions(List<String> accountIds,
+                                                                     YearMonth first, YearMonth last) {
+        GetEstimatedCarbonEmissionsRequest request = GetEstimatedCarbonEmissionsRequest.builder()
+                // The end of the time period is exclusive
+                .timePeriod(period -> period.start(startOf(first)).end(startOf(last.plusMonths(1))))
+                .filterBy(filter -> filter.dimensions(Map.of(Dimension.USAGE_ACCOUNT_ID, accountIds)))
+                .groupBy(Dimension.USAGE_ACCOUNT_ID)
+                .granularity(TimeGranularity.MONTHLY)
+                .build();
 
-    /** Top-level response wrapper. */
-    record CarbonFootprintResponse(List<CarbonFootprintSummary> carbonFootprintSummary) {}
+        Map<YearMonth, Map<String, Double>> metricTonsByMonth = new HashMap<>();
+        for (EstimatedCarbonEmissions row : client.getEstimatedCarbonEmissionsPaginator(request).results()) {
+            Emissions emissions = row.emissionsValues().get(EMISSIONS_TYPE);
+            if (emissions != null) {
+                metricTonsByMonth.computeIfAbsent(monthOf(row), month -> new HashMap<>())
+                        .merge(row.dimensionsValues().get(Dimension.USAGE_ACCOUNT_ID), emissions.value(), Double::sum);
+            }
+        }
+        return metricTonsByMonth;
+    }
 
-    /** One entry in the carbon footprint summary (per service or aggregate). */
-    record CarbonFootprintSummary(String serviceName, Double value, String unit) {}
+    private static Instant startOf(YearMonth month) {
+        return month.atDay(1).atStartOfDay(ZoneOffset.UTC).toInstant();
+    }
+
+    private static YearMonth monthOf(EstimatedCarbonEmissions row) {
+        return YearMonth.from(row.timePeriod().start().atZone(ZoneOffset.UTC));
+    }
 }

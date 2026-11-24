@@ -10,24 +10,24 @@ public class LeaderboardEntryDto {
     public String teamIcon;
     public int rank;
 
-    /** Total CO2 in kg for the current period. */
     public Double totalCo2Kg;
 
-    /** This team's share of the company's total cloud carbon footprint (0–100). */
+    /** 0–100 */
     public Double companySharePercent;
 
-    /** CO2 reduction percentage vs. the previous period. Positive = improvement. */
+    /** Vs. the previous period, based on daily averages; positive = reduction. */
     public Double reductionPercent;
 
-    /** CO2 from previous period for reference. */
     public Double previousCo2Kg;
 
-    /** Breakdown by cloud provider. */
     public Double awsCo2Kg;
     public Double azureCo2Kg;
     public Double gcpCo2Kg;
 
     public List<AchievementDto> achievements;
+
+    /** Periods up to and including {@link #period}, oldest first. */
+    public List<CarbonHistoryPointDto> history;
 
     public String period;
 }

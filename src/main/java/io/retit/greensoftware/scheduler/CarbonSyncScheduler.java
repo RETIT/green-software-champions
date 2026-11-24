@@ -7,12 +7,10 @@ import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
 /**
- * Scheduled job that periodically fetches carbon emission data from all enabled
- * cloud providers. By default, runs on the 1st of each month at 02:00 UTC.
- *
- * <p>The schedule can be overridden in application.yaml via
- * {@code quarkus.scheduler.cron-type} or by providing a custom cron expression
- * for {@code carbon.sync.cron}.
+ * Syncs the recent months by default at 02:00 on the 25th, as the providers publish a
+ * month's data by about the 19th (Azure) or 21st (AWS, GCP) of the following month.
+ * {@link ApplicationStartup} also runs it at startup, when the previous month may not
+ * be published yet.
  */
 @ApplicationScoped
 public class CarbonSyncScheduler {
@@ -22,18 +20,11 @@ public class CarbonSyncScheduler {
     @Inject
     CarbonDataService carbonDataService;
 
-    /**
-     * Runs on the 1st of each month at 02:00 UTC to sync the previous month's
-     * carbon footprint data from all configured cloud providers.
-     *
-     * <p>The cron expression {@code 0 0 2 1 * ?} means:
-     * at 02:00:00 on the 1st day of every month.
-     */
-    @Scheduled(cron = "${carbon.sync.cron:0 0 2 1 * ?}")
+    @Scheduled(cron = "${carbon.sync.cron:0 0 2 25 * ?}")
     void syncCarbonData() {
-        LOG.info("Scheduled carbon data sync triggered.");
+        LOG.info("Carbon data sync triggered.");
         try {
-            carbonDataService.syncCurrentPeriod();
+            carbonDataService.syncRecentPeriods();
         } catch (Exception e) {
             LOG.errorf("Carbon data sync failed: %s", e.getMessage(), e);
         }

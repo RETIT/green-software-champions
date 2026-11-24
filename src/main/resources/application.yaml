@@ -1,81 +1,108 @@
 # =============================================================================
 # Green Software Champions – Application Configuration
-# =============================================================================
-# All sensitive values should be supplied via environment variables.
-# Defaults are provided for local development convenience only.
+#
+# ${NAME:default} reads the environment variable (or property) NAME, falling
+# back to default; ${NAME} without a default is required.
+# The database file, identity provider and teams file are only configured in
+# %prod, without defaults, so production never falls back to a local, insecure
+# or sample value.
 # =============================================================================
 
 quarkus:
-  # ---------------------------------------------------------------------------
-  # Application identity
-  # ---------------------------------------------------------------------------
   application:
     name: green-software-champions
 
-  # ---------------------------------------------------------------------------
-  # Datasource – PostgreSQL (production) / H2 (test profile)
-  # jdbc.url is intentionally absent here so that Quarkus Dev Services can
-  # start a managed container in dev mode. The production URL is set in %prod.
-  # ---------------------------------------------------------------------------
+  # Teams and their cloud projects (TeamsConfig). %prod replaces the file
+  # rather than adding one, as the lists of several files are merged entry by
+  # entry.
+  config:
+    locations: sample-teams.yaml
+
+  # H2, embedded, in a file (path in %dev and %prod) that only one process can
+  # open at a time. No password: whoever can read the file can read the data,
+  # so the file system permissions protect it.
   datasource:
-    db-kind: postgresql
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:postgres}
+    db-kind: h2
+    username: gsc
 
   hibernate-orm:
-    log:
-      sql: false
+    # Flyway owns the schema
     schema-management:
-      strategy:
+      strategy: none
 
-  # ---------------------------------------------------------------------------
-  # Flyway – database migrations
-  # ---------------------------------------------------------------------------
   flyway:
     migrate-at-start: true
     locations: classpath:db/migration
 
-  # ---------------------------------------------------------------------------
-  # OIDC – Keycloak integration
-  # auth-server-url is intentionally absent here so that Quarkus Dev Services
-  # can start a managed Keycloak container in dev mode. Set in %prod.
-  # ---------------------------------------------------------------------------
+  # Identity provider: Keycloak or another OpenID Connect provider, see README.
+  # For a certificate of an internal CA, add the CA to a truststore of the TLS
+  # registry and reference it via quarkus.oidc.tls.tls-configuration-name.
   oidc:
-    client-id: ${KEYCLOAK_CLIENT_ID:green-champions}
-    credentials:
-      secret: ${KEYCLOAK_SECRET:change-me-in-production}
-    tls:
-      verification: none
-    # Token roles location (adjust to your Keycloak realm role mapping)
+    # Browsers log in with the authorization code flow, keeping the tokens in
+    # an encrypted session cookie; scripts send a bearer token
+    application-type: hybrid
+    client-id: ${OIDC_CLIENT_ID:green-champions}
     roles:
+      # Keycloak puts its realm roles only in the access token. Providers whose
+      # access token isn't meant for this application, e.g. Entra ID, need
+      # QUARKUS_OIDC_ROLES_SOURCE=idtoken.
       source: accesstoken
+      # groups (e.g. Okta, authentik), realm_access.roles (Keycloak), roles
+      # (Entra ID)
+      role-claim-path: groups,realm_access/roles,roles
+    authentication:
+      # fetch() cannot follow a redirect to the identity provider, so the
+      # frontend's requests (X-Requested-With: JavaScript) get 499 instead once
+      # the session has expired, and the frontend reloads the page
+      java-script-auto-redirect: false
+      # How long the session outlives the ID token: Keycloak's default SSO
+      # Session Idle, during which its refresh token is valid
+      session-age-extension: 30M
+    token:
+      # Renew the session's tokens rather than ending it when the ID token
+      # expires (Keycloak: 5 min)
+      refresh-expired: true
+      # Expected audiences (aud) of all tokens, comma-separated, only checked
+      # if set; for ID tokens instead of the client ID. Needed if other
+      # applications' tokens come from the same issuer, see README.
+      audience: ${OIDC_AUDIENCE:}
+    logout:
+      # Ends the session here and at the identity provider
+      path: /logout
+      post-logout-path: /
 
-  # ---------------------------------------------------------------------------
-  # Quinoa – frontend (Lit SPA) build & serve
-  # ---------------------------------------------------------------------------
+  # Builds and serves the frontend; in dev mode, proxies to the Vite dev server
   quinoa:
     build-dir: dist
     ui-dir: src/main/webui
-    # Development mode: proxy API requests to this Quarkus backend
     dev-server:
       port: 5173
+    ignored-path-prefixes: /api
 
-  # ---------------------------------------------------------------------------
-  # HTTP
-  # ---------------------------------------------------------------------------
+  # No CORS: the frontend is served from this origin, or from the Vite dev
+  # server, which proxies /api here
   http:
     port: 8080
-    cors:
-      ~: true
-      origins: ${CORS_ORIGINS:http://localhost:5173,http://localhost:8080}
+    # Checked before the REST endpoints check the roles. The most specific
+    # path wins.
+    auth:
+      permission:
+        # The frontend as well, so that opening the dashboard leads to the login
+        authenticated:
+          paths: /*
+          policy: authenticated
+        # Bearer tokens only, not the frontend's session cookie, against CSRF
+        admin-api:
+          paths: /api/admin/*
+          policy: authenticated
+          auth-mechanism: bearer
+        # Health checks of the container platform or load balancer
+        health:
+          paths: /q/health,/q/health/*
+          policy: permit
 
-  # ---------------------------------------------------------------------------
-  # REST Clients for cloud provider APIs
-  # ---------------------------------------------------------------------------
+  # Azure and GCP APIs (AWS is called via its SDK)
   rest-client:
-    aws-carbon-api:
-      url: ${cloud.aws.endpoint:https://sustainability.us-east-1.amazonaws.com}
-      scope: jakarta.inject.Singleton
     azure-carbon-api:
       url: ${cloud.azure.endpoint:https://management.azure.com}
       scope: jakarta.inject.Singleton
@@ -83,26 +110,20 @@ quarkus:
       url: ${cloud.gcp.endpoint:https://cloudbilling.googleapis.com}
       scope: jakarta.inject.Singleton
 
-  # ---------------------------------------------------------------------------
-  # Logging
-  # ---------------------------------------------------------------------------
+  # DEBUG for the application's own classes is enabled in %dev
   log:
     level: INFO
-    category:
-      "com.retit.greensoftware":
-        level: DEBUG
 
 # =============================================================================
-# Cloud Provider Configuration
-# Configure the REST endpoints and credentials for each cloud provider.
-# All providers are disabled by default; enable them with the corresponding
-# environment variable or by editing this file.
+# Cloud providers (CloudProvidersConfig), all disabled by default. Without an
+# enabled provider, nothing is synced; in dev mode, sample data is seeded.
 # =============================================================================
 cloud:
   aws:
     enabled: ${AWS_ENABLED:false}
-    endpoint: ${AWS_ENDPOINT:https://sustainability.us-east-1.amazonaws.com}
     region: ${AWS_REGION:us-east-1}
+    access-key: ${AWS_ACCESS_KEY_ID:}
+    secret-key: ${AWS_SECRET_ACCESS_KEY:}
 
   azure:
     enabled: ${AZURE_ENABLED:false}
@@ -113,118 +134,88 @@ cloud:
     endpoint: ${GCP_ENDPOINT:https://cloudbilling.googleapis.com}
 
 # =============================================================================
-# Carbon Sync Schedule
-# Default: 1st of every month at 02:00 UTC
-# Override via carbon.sync.cron environment variable or application.yaml.
+# Carbon Data Sync & History
 # =============================================================================
 carbon:
   sync:
-    cron: "${CARBON_SYNC_CRON:0 0 2 1 * ?}"
+    # 02:00 on the 25th (server time zone), as the providers publish a month's
+    # data by about the 19th (Azure) or 21st (AWS, GCP) of the following month.
+    # With an enabled provider, the startup also runs a sync and waits for it.
+    cron: "${CARBON_SYNC_CRON:0 0 2 25 * ?}"
+    # Months fetched by each sync, ending with the previous month. Older months
+    # are re-fetched, as the providers may revise their data; their
+    # achievements are still evaluated only once.
+    months: ${CARBON_SYNC_MONTHS:12}
+
+  history:
+    # Maximum number of months the history charts show, 13 to include the same
+    # month of the previous year. Never before the earliest synced month.
+    months: ${CARBON_HISTORY_MONTHS:13}
 
 # =============================================================================
-# Teams Configuration
-# Define which teams exist and which cloud projects belong to each team.
-# Each team entry will be synchronised into the database on startup.
-# =============================================================================
-teams:
-  definitions:
-    - name: "Team Alpha"
-      description: "Frontend development team"
-      color: "#4CAF50"
-      icon: "🌱"
-      projects:
-        - provider: AWS
-          project-id: "${ALPHA_AWS_PROJECT:123456789012}"
-          project-name: "Alpha AWS Account"
-        - provider: GCP
-          project-id: "${ALPHA_GCP_PROJECT:alpha-project-gcp}"
-          project-name: "Alpha GCP Project"
-
-    - name: "Team Beta"
-      description: "Backend development team"
-      color: "#2196F3"
-      icon: "💧"
-      projects:
-        - provider: AZURE
-          project-id: "${BETA_AZURE_PROJECT:/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/beta-rg}"
-          project-name: "Beta Azure Resource Group"
-        - provider: AWS
-          project-id: "${BETA_AWS_PROJECT:234567890123}"
-          project-name: "Beta AWS Account"
-
-    - name: "Team Gamma"
-      description: "Data engineering team"
-      color: "#FF9800"
-      icon: "⚡"
-      projects:
-        - provider: GCP
-          project-id: "${GAMMA_GCP_PROJECT:gamma-data-project}"
-          project-name: "Gamma GCP Data Project"
-        - provider: AZURE
-          project-id: "${GAMMA_AZURE_PROJECT:/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/gamma-rg}"
-          project-name: "Gamma Azure Resource Group"
-
-    - name: "Team Delta"
-      description: "Platform engineering team"
-      color: "#9C27B0"
-      icon: "🚀"
-      projects:
-        - provider: AWS
-          project-id: "${DELTA_AWS_PROJECT:345678901234}"
-          project-name: "Delta AWS Account"
-        - provider: GCP
-          project-id: "${DELTA_GCP_PROJECT:delta-platform-project}"
-          project-name: "Delta GCP Platform"
-        - provider: AZURE
-          project-id: "${DELTA_AZURE_PROJECT:/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/delta-rg}"
-          project-name: "Delta Azure Resource Group"
-
-# =============================================================================
-# Production profile – real database and Keycloak URLs
+# Production profile – database file, identity provider, teams file
 # =============================================================================
 "%prod":
   quarkus:
+    # Teams file, e.g. /etc/green-champions/teams.yaml, structured like
+    # sample-teams.yaml. The application refuses to start without it.
+    config:
+      locations: ${TEAMS_FILE}
+
+    # H2 database file without the extension .mv.db, absolute or starting with
+    # ./ or ~/, e.g. /var/lib/green-champions/greensoft. Created at the first
+    # start.
     datasource:
       jdbc:
-        url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:greensoft}
+        url: jdbc:h2:file:${DB_FILE}
+
+    # Issuer URL, e.g. https://keycloak.example.com/realms/green-software
     oidc:
-      auth-server-url: ${KEYCLOAK_URL:http://localhost:8180}/realms/${KEYCLOAK_REALM:green-software}
+      auth-server-url: ${OIDC_ISSUER_URL}
+      credentials:
+        secret: ${OIDC_CLIENT_SECRET}
 
 # =============================================================================
-# Test profile overrides
+# Test profile – in-memory database, no identity provider, and no calls of the
+# cloud APIs, even if providers are enabled via environment variables
 # =============================================================================
 "%test":
+  cloud:
+    aws:
+      enabled: false
+    azure:
+      enabled: false
+    gcp:
+      enabled: false
+
   quarkus:
     datasource:
-      db-kind: h2
       jdbc:
         url: jdbc:h2:mem:greensoft;DB_CLOSE_DELAY=-1
-    flyway:
-      migrate-at-start: true
-    hibernate-orm:
-      database:
-        generation: none
-    oidc:
+
+    rest-client:
+      azure-carbon-api:
+        url: http://localhost:9999
+      gcp-carbon-api:
+        url: http://localhost:9999
+
+    scheduler:
       enabled: false
-    quinoa:
+
+    oidc:
       enabled: false
 
 # =============================================================================
-# Dev profile overrides
-# Quarkus Dev Services start PostgreSQL and Keycloak automatically via Docker/
-# Podman when no explicit URL is configured in this profile.
+# Dev profile – Dev Services start Keycloak in a container (Docker or Podman),
+# as no issuer URL is configured outside %prod
 # =============================================================================
 "%dev":
   quarkus:
-    # PostgreSQL Dev Service ---------------------------------------------------
-    # No jdbc.url is set globally, so Quarkus starts a managed Postgres container.
+    # Delete ./data to start with an empty database
     datasource:
-      devservices:
-        enabled: true
+      jdbc:
+        url: jdbc:h2:file:${DB_FILE:./data/greensoft}
 
-    # Keycloak Dev Service -----------------------------------------------------
-    # No auth-server-url is set globally, so Quarkus starts a managed Keycloak
-    # container and injects the correct URL automatically.
     oidc:
       enabled: true
       client-id: green-champions
@@ -237,7 +228,7 @@ teams:
         users:
           developer: developer
           admin: admin
-        # username → realm roles  (matches @RolesAllowed in resources)
+        # username → realm roles
         roles:
           developer:
             - user
@@ -248,3 +239,16 @@ teams:
     hibernate-orm:
       log:
         sql: true
+        # Uncomment to also log the values bound to the SQL parameters
+        # bind-parameters: true
+
+    log:
+      category:
+        "io.retit.greensoftware":
+          level: DEBUG
+
+    security:
+      auth:
+        # false turns the security checks off in dev mode; true enforces the
+        # login and roles like in production
+        enabled-in-dev-mode: false

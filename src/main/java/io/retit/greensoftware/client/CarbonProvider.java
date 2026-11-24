@@ -1,35 +1,47 @@
 package io.retit.greensoftware.client;
 
 import io.retit.greensoftware.entity.CloudProject;
+import io.retit.greensoftware.util.PeriodRange;
+import org.jboss.logging.Logger;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 
-/**
- * Common interface for all cloud provider carbon footprint data providers.
- * Each cloud provider implementation fetches carbon emission data for the
- * given projects and reporting period.
- */
+/** Fetches the carbon emissions of one cloud provider's projects. */
 public interface CarbonProvider {
 
-    /**
-     * Result record holding carbon footprint data for a single cloud project.
-     *
-     * @param projectId  The cloud project identifier.
-     * @param co2Kg      Total CO2-equivalent emissions in kg.
-     */
     record CarbonData(String projectId, double co2Kg) {}
 
     /**
-     * Fetch carbon footprint data for the specified projects in the given period.
+     * Fetches the emissions of {@code projects}, all of this provider, in each period of
+     * {@code range}.
      *
-     * @param projects Cloud projects to fetch data for (all must belong to this provider).
-     * @param period   Reporting period in "YYYY-MM" format.
-     * @return List of carbon data records, one per project.
+     * @return one entry per project by period (YYYY-MM). A period is left out unless
+     *         every project's data could be fetched and has been published.
+     * @throws CarbonDataUnavailableException if nothing could be fetched, e.g. because
+     *         the API is unreachable
      */
-    List<CarbonData> fetchCarbonData(List<CloudProject> projects, String period);
+    Map<String, List<CarbonData>> fetchCarbonData(List<CloudProject> projects, PeriodRange range);
+
+    boolean isEnabled();
 
     /**
-     * Check whether this provider is enabled in the current configuration.
+     * Implements {@link #fetchCarbonData} for APIs that return one period per request. A
+     * period whose {@code fetchPeriod} throws {@link CarbonDataUnavailableException} is
+     * left out without costing the other periods their data.
      */
-    boolean isEnabled();
+    static Map<String, List<CarbonData>> fetchEachPeriod(PeriodRange range,
+                                                         Function<String, List<CarbonData>> fetchPeriod) {
+        Map<String, List<CarbonData>> results = new HashMap<>();
+        for (String period : range.periods()) {
+            try {
+                results.put(period, fetchPeriod.apply(period));
+            } catch (CarbonDataUnavailableException e) {
+                Logger.getLogger(CarbonProvider.class).warnf("Leaving out period %s: %s", period, e.getMessage());
+            }
+        }
+        return results;
+    }
 }

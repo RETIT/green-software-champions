@@ -13,10 +13,6 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
 import java.util.List;
 
-/**
- * REST resource exposing the leaderboard and team data to the single-page frontend.
- * All endpoints require the "user" role (any authenticated Keycloak user).
- */
 @Path("/api/leaderboard")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
@@ -27,11 +23,7 @@ public class LeaderboardResource {
     @Inject
     LeaderboardService leaderboardService;
 
-    /**
-     * Returns the ranked leaderboard for the specified period.
-     *
-     * @param period Optional period in YYYY-MM format. Defaults to the current month.
-     */
+    /** @param period YYYY-MM, or empty for the latest period every team has data for */
     @GET
     @Operation(summary = "Get the carbon footprint leaderboard",
                description = "Returns all teams ranked by their total cloud carbon footprint for the given period.")
@@ -40,9 +32,7 @@ public class LeaderboardResource {
         return leaderboardService.getLeaderboard(period);
     }
 
-    /**
-     * Returns company-wide carbon summary for the specified period.
-     */
+    /** @param period like {@link #getLeaderboard}; the response names the resolved period */
     @GET
     @Path("/summary")
     @Operation(summary = "Get company-wide carbon summary",
@@ -52,9 +42,6 @@ public class LeaderboardResource {
         return leaderboardService.getCompanySummary(period);
     }
 
-    /**
-     * Returns all teams with their cloud project assignments.
-     */
     @GET
     @Path("/teams")
     @Operation(summary = "Get all teams", description = "Returns all teams and their configured cloud projects.")

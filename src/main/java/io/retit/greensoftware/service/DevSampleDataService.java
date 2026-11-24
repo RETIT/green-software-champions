@@ -1,159 +1,120 @@
 package io.retit.greensoftware.service;
 
-import io.retit.greensoftware.entity.Achievement;
-import io.retit.greensoftware.entity.AchievementType;
+import io.retit.greensoftware.config.CarbonHistoryConfig;
 import io.retit.greensoftware.entity.CarbonEntry;
+import io.retit.greensoftware.entity.CloudProject;
+import io.retit.greensoftware.entity.CloudProvider;
 import io.retit.greensoftware.entity.Team;
+import io.retit.greensoftware.util.Periods;
 import io.quarkus.arc.profile.IfBuildProfile;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
 
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Objects;
+import java.util.Random;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-/**
- * Inserts realistic sample carbon data in dev mode so the UI is immediately useful
- * without requiring live cloud-provider API credentials.
- *
- * Only active when the "dev" build profile is selected ({@code mvn quarkus:dev}).
- * Idempotent: already-existing entries are skipped on every restart.
- */
+/** Seeds sample carbon data in dev mode, so the UI is useful without cloud credentials. */
 @ApplicationScoped
 @IfBuildProfile("dev")
 public class DevSampleDataService {
 
     private static final Logger LOG = Logger.getLogger(DevSampleDataService.class);
-    private static final DateTimeFormatter PERIOD_FMT = DateTimeFormatter.ofPattern("yyyy-MM");
+
+    @Inject
+    CarbonHistoryConfig historyConfig;
+
+    @Inject
+    CarbonDataService carbonDataService;
 
     /**
-     * Seeds sample carbon entries and achievements for all configured teams.
-     * Must be called after {@link TeamSetupService#initialiseTeams()} so that
-     * {@link Team} records already exist in the database.
+     * Seeds the missing entries of every team and evaluates their achievements like a
+     * sync. Requires the teams to exist, see {@link TeamSetupService#initialiseTeams()}.
      */
     @Transactional
     public void seedSampleData() {
-        String current  = LocalDate.now().format(PERIOD_FMT);
-        String previous = LocalDate.now().minusMonths(1).format(PERIOD_FMT);
-
-        // -----------------------------------------------------------------------
-        // Carbon entries per team
-        // Fields: teamName | currentTotal | awsCurr | azureCurr | gcpCurr
-        //                   | prevTotal   | awsPrev  | azurePrev | gcpPrev
-        // null = provider not used by that team
-        // -----------------------------------------------------------------------
-        List<SampleEntry> entries = List.of(
-            new SampleEntry("Team Alpha",
-                /*current*/ 245.5, 180.2, null,  65.3,
-                /*prev*/    312.3, 237.8, null,  74.5),
-            new SampleEntry("Team Beta",
-                /*current*/ 189.2,  98.4, 90.8,  null,
-                /*prev*/    167.8,  82.1, 85.7,  null),
-            new SampleEntry("Team Gamma",
-                /*current*/ 128.4,  null, 42.1,  86.3,
-                /*prev*/    189.1,  null, 61.4, 127.7),
-            new SampleEntry("Team Delta",
-                /*current*/ 412.7, 201.3, 112.8,  98.6,
-                /*prev*/    445.2, 220.5, 118.4, 106.3)
-        );
+        // One more than charted, so the oldest charted period has a predecessor
+        List<String> periods = Periods.window(Periods.previous(), historyConfig.months() + 1);
 
         int inserted = 0;
-        for (SampleEntry s : entries) {
-            Team team = Team.findByName(s.teamName);
-            if (team == null) {
-                LOG.warnf("Dev sample data: team '%s' not found – run TeamSetupService first.", s.teamName);
-                continue;
-            }
+        for (Team team : Team.<Team>listAll()) {
+            SampleTeam s = SampleTeam.of(team);
 
-            // Previous-period entry (no reduction figure – this IS the baseline)
-            if (CarbonEntry.findByTeamAndPeriod(team, previous).isEmpty()) {
-                CarbonEntry prev = new CarbonEntry();
-                prev.team           = team;
-                prev.period         = previous;
-                prev.totalCo2Kg     = s.prevTotal;
-                prev.awsCo2Kg       = s.awsPrev;
-                prev.azureCo2Kg     = s.azurePrev;
-                prev.gcpCo2Kg       = s.gcpPrev;
-                prev.syncTimestamp  = Instant.now();
-                prev.persist();
-                inserted++;
-            }
+            for (int i = 0; i < periods.size(); i++) {
+                int monthsAgo = periods.size() - 1 - i;
+                double factor = Math.pow(1 + s.monthlyReduction, monthsAgo)
+                        * (1 + 0.08 * Math.sin(monthsAgo * s.wiggle));
 
-            // Current-period entry (includes comparison to previous)
-            if (CarbonEntry.findByTeamAndPeriod(team, current).isEmpty()) {
-                double reduction = s.prevTotal > 0
-                        ? ((s.prevTotal - s.currentTotal) / s.prevTotal) * 100.0
-                        : 0.0;
+                Double aws   = scale(s.awsLatest, factor);
+                Double azure = scale(s.azureLatest, factor);
+                Double gcp   = scale(s.gcpLatest, factor);
+                // Null rather than 0 for a team without projects, like a sync stores it
+                Double total = Stream.of(aws, azure, gcp).filter(Objects::nonNull)
+                        .reduce(Double::sum).orElse(null);
 
-                CarbonEntry curr = new CarbonEntry();
-                curr.team                = team;
-                curr.period              = current;
-                curr.totalCo2Kg          = s.currentTotal;
-                curr.previousCo2Kg       = s.prevTotal;
-                curr.reductionPercentage = reduction;
-                curr.awsCo2Kg            = s.awsCurrent;
-                curr.azureCo2Kg          = s.azureCurrent;
-                curr.gcpCo2Kg            = s.gcpCurrent;
-                curr.syncTimestamp       = Instant.now();
-                curr.persist();
-                inserted++;
+                if (CarbonEntry.findByTeamAndPeriod(team, periods.get(i)).isEmpty()) {
+                    CarbonEntry entry = new CarbonEntry();
+                    entry.team          = team;
+                    entry.period        = periods.get(i);
+                    entry.totalCo2Kg    = total;
+                    entry.awsCo2Kg      = aws;
+                    entry.azureCo2Kg    = azure;
+                    entry.gcpCo2Kg      = gcp;
+                    entry.syncTimestamp = Instant.now();
+                    entry.persist();
+                    inserted++;
+                }
             }
         }
 
-        seedAchievements();
+        carbonDataService.evaluateNewCompletePeriods(periods);
         LOG.infof("Dev sample data seeding complete – %d carbon entr%s inserted.",
                 inserted, inserted == 1 ? "y" : "ies");
     }
 
-    // -------------------------------------------------------------------------
-    // Achievements
-    // -------------------------------------------------------------------------
-
-    private void seedAchievements() {
-        // Winner: biggest relative reduction
-        insertAchievement("Team Gamma",  "🌱 Green Streak",
-                "Three months of consecutive carbon reduction!",     "🌱", AchievementType.GREEN_STREAK);
-        insertAchievement("Team Gamma",  "⚡ Efficiency Expert",
-                "Reduced cloud carbon footprint by over 32 % in a single month.", "⚡", AchievementType.EFFICIENCY_EXPERT);
-
-        // Runner-up: absolute lowest footprint history
-        insertAchievement("Team Alpha",  "🏆 Leaderboard Leader",
-                "Held the top spot on the leaderboard last month.",  "🏆", AchievementType.LEADERBOARD_LEADER);
-
-        // Large team with good absolute saving
-        insertAchievement("Team Delta",  "💧 Big Saver",
-                "Saved over 32 kg CO₂ compared to the previous month.", "💧", AchievementType.BIG_SAVER);
+    /** Scales a provider value by {@code factor}, rounded to one decimal. */
+    private static Double scale(Double value, double factor) {
+        return value == null ? null : Math.round(value * factor * 10) / 10.0;
     }
 
-    private void insertAchievement(String teamName, String title, String description,
-                                   String icon, AchievementType type) {
-        Team team = Team.findByName(teamName);
-        if (team == null) return;
-        long exists = Achievement.count("team = ?1 and type = ?2", team, type);
-        if (exists == 0) {
-            Achievement a = new Achievement();
-            a.team        = team;
-            a.title       = title;
-            a.description = description;
-            a.badgeIcon   = icon;
-            a.earnedAt    = Instant.now();
-            a.type        = type;
-            a.persist();
+    /**
+     * A team's emissions per provider in the latest period (null if unused), from which
+     * the older periods are derived: {@code monthlyReduction} is the average reduction
+     * per month (negative = growing), {@code wiggle} the frequency of the noise on top.
+     */
+    private record SampleTeam(
+            Double awsLatest, Double azureLatest, Double gcpLatest,
+            double monthlyReduction, double wiggle
+    ) {
+
+        /**
+         * Random, but seeded with the team name, so that a team gets the same values at
+         * every restart and later months continue its curve.
+         */
+        static SampleTeam of(Team team) {
+            Set<CloudProvider> providers = CloudProject.findByTeam(team).stream()
+                    .map(p -> p.provider)
+                    .collect(Collectors.toSet());
+            Random random = new Random(team.name.hashCode());
+            // Drawn even for unused providers, so adding a project leaves the other values unchanged
+            Double aws   = latestCo2Kg(random, providers.contains(CloudProvider.AWS));
+            Double azure = latestCo2Kg(random, providers.contains(CloudProvider.AZURE));
+            Double gcp   = latestCo2Kg(random, providers.contains(CloudProvider.GCP));
+            double monthlyReduction = -0.015 + random.nextDouble() * 0.065; // -1.5 % to 5 %
+            double wiggle = 0.8 + random.nextDouble() * 1.7;                // 0.8 to 2.5
+            return new SampleTeam(aws, azure, gcp, monthlyReduction, wiggle);
+        }
+
+        /** A provider's emissions in the latest period, 40 to 220 kg, or null if unused. */
+        private static Double latestCo2Kg(Random random, boolean used) {
+            double co2Kg = Math.round((40 + random.nextDouble() * 180) * 10) / 10.0;
+            return used ? co2Kg : null;
         }
     }
-
-    // -------------------------------------------------------------------------
-    // Internal data holder
-    // -------------------------------------------------------------------------
-
-    private record SampleEntry(
-            String teamName,
-            // current period
-            double currentTotal, Double awsCurrent, Double azureCurrent, Double gcpCurrent,
-            // previous period
-            double prevTotal,    Double awsPrev,    Double azurePrev,    Double gcpPrev
-    ) {}
 }
-

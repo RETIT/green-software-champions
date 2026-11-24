@@ -1,52 +1,143 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Green Software Champions | RETIT</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌿</text></svg>" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&display=swap" rel="stylesheet" />
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      /* RETIT CI colors (from main.css) */
-      --retit-green:        #75b729;   /* --main-color */
-      --retit-green-dark:   #568139;   /* --button-main-color */
-      --retit-green-darker: #426914;
-      --retit-bg:           #f4fbf6;   /* style1 background */
-      --retit-bg-white:     #ffffff;
-      --retit-footer:       #333333;
-      --retit-text:         #666666;
-      --retit-text-dark:    #555555;
-      --retit-text-darker:  #333333;
-      --retit-text-light:   #999999;
-      --retit-border:       rgba(144, 144, 144, 0.35);
-      --retit-shadow:       0px 3px 10px 3px rgba(0, 0, 0, 0.08);
-      --retit-shadow-card:  0px 3px 7px 2px rgba(0, 0, 0, 0.18);
-      --retit-red:          #c0392b;
-      --retit-gold:         #e6a817;
-    }
-    html { scroll-behavior: smooth; }
-    body {
-      font-family: 'Source Sans 3', 'Source Sans Pro', Helvetica, sans-serif;
-      background: var(--retit-bg);
-      color: var(--retit-text);
-      min-height: 100vh;
-      font-size: 16px;
-      font-weight: 300;
-      line-height: 1.65;
-      -webkit-font-smoothing: antialiased;
-    }
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: var(--retit-bg); }
-    ::-webkit-scrollbar-thumb { background: rgba(117,183,41,0.3); border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--retit-green); }
-  </style>
-</head>
-<body>
-  <gsc-app></gsc-app>
-  <script type="module" src="/src/index.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Green Software Champions | RETIT</title>
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌿</text></svg>"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      :root {
+        color-scheme: light dark;
+
+        /* RETIT CI colors */
+        --retit-green: #75b729; /* --main-color */
+        --retit-green-dark: #568139; /* --button-main-color */
+        --retit-green-light: #c3e895;
+        --retit-red: #c0392b;
+
+        /* Neutrals */
+        --retit-white: #ffffff;
+        --retit-surface: #ffffff; /* cards, panels, tooltips */
+        --retit-bg: #f4fbf6; /* style1 background */
+        --retit-border: #d9d9d9;
+        --retit-text-light: #999999;
+        --retit-text: #555555;
+        --retit-dark: #333333; /* header & footer */
+
+        /* Header & footer (on --retit-dark) */
+        --retit-on-dark-text-muted: #d6d6d6;
+        --retit-on-dark-fill: #525252;
+        --retit-on-dark-border: #7a7a7a;
+
+        --retit-shadow: 0px 3px 10px 3px rgba(0, 0, 0, 0.08);
+        --retit-shadow-raised: 0px 3px 7px 2px rgba(0, 0, 0, 0.18);
+
+        /* Medals */
+        --retit-gold: #ffd700;
+        /*--retit-gold: linear-gradient(rgb(254, 225, 129) 0%, rgb(255, 190, 100) 100%);*/
+        --retit-gold-text: #9a7b00;
+        --retit-silver: #c0c0c0;
+        /*--retit-silver: linear-gradient(rgb(236, 236, 236) 0%, rgb(203, 203, 203) 100%)*/
+        --retit-bronze: #cc9966;
+        /*--retit-bronze: linear-gradient(rgb(247, 203, 186) 0%, rgb(233, 185, 166) 100%);*/
+        --retit-bronze-text: #7a3b1a;
+
+        /* World map */
+        --retit-map-land: #dbf1bf;
+        --retit-map-ocean: #e8f4fb;
+
+        /* Cloud providers (charts) */
+        --provider-aws: #eb6834;
+        --provider-azure: #2a78d6;
+        --provider-gcp: #1baf7a;
+
+        /* Typography */
+        --retit-font:
+          system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+          sans-serif;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          /* RETIT CI colors (brightened for contrast on dark) */
+          --retit-green: #82c437;
+          --retit-green-dark: #9ccc65;
+          --retit-green-light: #c3e895;
+          --retit-red: #e8695c;
+
+          /* Neutrals */
+          --retit-surface: #1b231d;
+          --retit-bg: #121814;
+          --retit-border: #313d34;
+          --retit-text-light: #8e9a91;
+          --retit-text: #d5ddd7;
+          --retit-dark: #0b0f0c; /* header & footer */
+
+          /* Header & footer (on --retit-dark) */
+          --retit-on-dark-text-muted: #b9c3bb;
+          --retit-on-dark-fill: #26302a;
+          --retit-on-dark-border: #46524a;
+
+          --retit-shadow: 0px 3px 10px 3px rgba(0, 0, 0, 0.35);
+          --retit-shadow-raised: 0px 3px 7px 2px rgba(0, 0, 0, 0.55);
+
+          /* Medals */
+          --retit-gold: #d4ac0d;
+          --retit-gold-text: #e9c94a;
+          --retit-silver: #9a9a9a;
+          --retit-bronze: #b8683d;
+          --retit-bronze-text: #e09a70;
+
+          /* World map */
+          --retit-map-land: #2b3b24;
+          --retit-map-ocean: #15212a;
+
+          /* Cloud providers (charts) */
+          --provider-aws: #d95926;
+          --provider-azure: #3987e5;
+          --provider-gcp: #199e70;
+        }
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        font-family: var(--retit-font);
+        background: var(--retit-bg);
+        color: var(--retit-text);
+        min-height: 100vh;
+        font-size: 16px;
+        font-weight: 300;
+        line-height: 1.65;
+        -webkit-font-smoothing: antialiased;
+      }
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: var(--retit-bg);
+      }
+      ::-webkit-scrollbar-thumb {
+        background: color-mix(in srgb, var(--retit-green) 30%, var(--retit-bg));
+        border-radius: 3px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--retit-green);
+      }
+    </style>
+  </head>
+  <body>
+    <gsc-app></gsc-app>
+    <script type="module" src="/src/index.ts"></script>
+  </body>
 </html>

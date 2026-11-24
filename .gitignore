@@ -29,6 +29,9 @@ target/
 # Quarkus
 .quarkus/
 
+# H2 database file of dev mode
+/data/
+
 # Local environment overrides (may contain secrets – not committed)
 # Use .env.example as a template
 .env
