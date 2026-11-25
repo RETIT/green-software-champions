@@ -6,7 +6,6 @@ export default defineConfig({
   appType: 'custom',
   build: {
     outDir: 'dist',
-    sourcemap: true,
     // Tells Quarkus the names of the built files, see Assets.java
     manifest: true,
     rollupOptions: {

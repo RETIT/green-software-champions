@@ -86,6 +86,10 @@ quarkus:
     # removes the Content-Encoding of the compressed pages otherwise.
     enable-compression: true
     compressors: gzip
+    # Doesn't serve Vite's manifest (.vite/manifest.json), which Assets reads from
+    # the classpath
+    static-resources:
+      include-hidden: false
     # Checked before the REST endpoints check the roles. The most specific
     # path wins.
     auth:
