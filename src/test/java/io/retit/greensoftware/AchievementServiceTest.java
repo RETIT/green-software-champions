@@ -5,6 +5,7 @@ import io.retit.greensoftware.entity.AchievementType;
 import io.retit.greensoftware.entity.CarbonEntry;
 import io.retit.greensoftware.entity.Team;
 import io.retit.greensoftware.service.AchievementService;
+import io.retit.greensoftware.service.AwardedAchievement;
 import io.retit.greensoftware.util.Periods;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
@@ -409,14 +410,19 @@ class AchievementServiceTest {
     @Transactional
     void grantCustomAchievement_persistsAchievement() {
         Team alpha = team(TEAM_ALPHA);
-        Achievement achievement = achievementService.grantCustomAchievement(
-                alpha, "Special Award", "Great teamwork!", "🎉");
+        AwardedAchievement achievement = achievementService.grantCustomAchievement(
+                alpha.id, "Special Award", "Great teamwork!", "🎉").orElseThrow();
 
-        assertNotNull(achievement.id);
-        assertEquals("Special Award", achievement.title);
-        assertEquals(AchievementType.CUSTOM, achievement.type);
-        assertEquals(Periods.current(), achievement.period,
+        assertNotNull(achievement.id());
+        assertEquals("Special Award", achievement.title());
+        assertEquals(AchievementType.CUSTOM, achievement.type());
+        assertEquals(Periods.current(), achievement.period(),
                 "A custom achievement should be awarded in the current period");
+    }
+
+    @Test
+    void grantCustomAchievement_isEmptyForAnUnknownTeam() {
+        assertTrue(achievementService.grantCustomAchievement(-1L, "Special Award", null, null).isEmpty());
     }
 
     /** Evaluates every period from {@code first} to {@code last}, oldest first, like a sync. */

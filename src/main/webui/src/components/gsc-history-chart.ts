@@ -36,27 +36,36 @@ const PROVIDERS = [
 const darkMode = window.matchMedia("(prefers-color-scheme: dark)");
 
 /**
- * Stacked bar chart of the monthly CO₂e per cloud provider.
+ * Stacked bar chart of the monthly CO₂e per cloud provider. In a card, it is drawn once
+ * the card is open.
  */
 @customElement("gsc-history-chart")
 export class GscHistoryChart extends LitElement {
   /** Points ordered oldest first. */
-  @property({ attribute: false }) history: HistoryPoint[] = [];
+  @property({ type: Array }) history: HistoryPoint[] = [];
   @query("canvas") private _canvas!: HTMLCanvasElement;
+  private _card: HTMLDetailsElement | null = null;
   private _chart?: Chart<"bar", (number | null)[], string>;
 
-  private _onThemeChange = () => this._renderChart();
+  private _redraw = () => this.requestUpdate();
 
   override connectedCallback() {
     super.connectedCallback();
-    darkMode.addEventListener("change", this._onThemeChange);
+    this._card = this.closest("details");
+    this._card?.addEventListener("toggle", this._redraw);
+    darkMode.addEventListener("change", this._redraw);
   }
 
   override disconnectedCallback() {
     super.disconnectedCallback();
-    darkMode.removeEventListener("change", this._onThemeChange);
+    this._card?.removeEventListener("toggle", this._redraw);
+    darkMode.removeEventListener("change", this._redraw);
     this._chart?.destroy();
     this._chart = undefined;
+  }
+
+  override shouldUpdate() {
+    return this._card?.open ?? true;
   }
 
   override updated() {
@@ -92,7 +101,7 @@ export class GscHistoryChart extends LitElement {
         labels: this.history.map((p) => p.period),
         datasets: PROVIDERS.map((provider) => ({
           label: provider.label,
-          data: this.history.map((p) => p[provider.key]),
+          data: this.history.map((p) => p[provider.key] ?? null),
           backgroundColor: token(provider.color),
           // Keeps the bars slim while there are only a few months of history
           maxBarThickness: 48,
@@ -177,7 +186,7 @@ export class GscHistoryChart extends LitElement {
                 const lines = [`Total: ${formatCo2(totalCo2Kg)}`];
                 const days = daysInPeriod(period);
                 // Equal to the total for months of the normalized length
-                if (totalCo2Kg !== null && days !== NORMALIZED_DAYS) {
+                if (totalCo2Kg !== undefined && days !== NORMALIZED_DAYS) {
                   lines.push(
                     `Per ${NORMALIZED_DAYS} days: ${formatCo2(normalizeToMonth(totalCo2Kg, days))}`,
                   );
@@ -198,13 +207,8 @@ export class GscHistoryChart extends LitElement {
     ></canvas>`;
   }
 
+  /** The host is styled by leaderboard.css, as it needs its size before this is loaded. */
   static override styles = css`
-    :host {
-      display: block;
-      position: relative;
-      height: 200px;
-    }
-
     /* Out of flow, so the canvas size Chart.js sets (rounded to device pixels)
        never feeds back into the layout; Chart.js sizes it from the host. */
     canvas {

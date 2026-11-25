@@ -1,0 +1,377 @@
+.legend {
+  margin-bottom: 1em;
+  font-size: 0.78em;
+  font-weight: 400;
+  color: var(--retit-text-light);
+}
+
+.leaderboard-grid {
+  display: grid;
+  /* minmax(0, …) so card content can never widen the column */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75em;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 4em 2em;
+  color: var(--retit-text-light);
+  background: var(--retit-surface);
+  border-radius: 3px;
+  box-shadow: var(--retit-shadow);
+}
+
+.empty-icon {
+  font-size: 2.5em;
+  margin-bottom: 0.75em;
+  opacity: 0.4;
+}
+
+.empty-state p {
+  font-size: 0.9em;
+  line-height: 1.6;
+}
+
+/* Card of a team, a <details> element. --team-color is set by the template. */
+
+.card {
+  background: var(--retit-surface);
+  border-radius: 3px;
+  box-shadow: var(--retit-shadow);
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.card:hover {
+  box-shadow: var(--retit-shadow-raised);
+  transform: scale(1.005);
+}
+
+/* top accent bar, only shown for the top three ranks */
+.card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 0;
+}
+
+.card.rank-1::before {
+  background: var(--retit-gold);
+  width: 100%;
+}
+.card.rank-2::before {
+  background: var(--retit-silver);
+  width: 100%;
+}
+.card.rank-3::before {
+  background: var(--retit-bronze);
+  width: 100%;
+}
+
+.card summary {
+  display: flex;
+  align-items: center;
+  gap: 1em;
+  padding: 1em 1.5em;
+  cursor: pointer;
+  /* Replaced by the chevron */
+  list-style: none;
+}
+
+.card summary::-webkit-details-marker {
+  display: none;
+}
+
+.card summary:focus-visible {
+  outline: 2px solid var(--retit-green);
+  /* The card clips what is outside */
+  outline-offset: -2px;
+}
+
+.rank-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(2.2em + 2px);
+  height: calc(2.2em + 2px);
+  border-radius: 3px;
+  font-weight: 700;
+  background: var(--retit-bg);
+  color: var(--retit-text-light);
+  flex-shrink: 0;
+  border: 1px solid var(--retit-border);
+}
+
+.rank-1 .rank-badge {
+  background: color-mix(in srgb, var(--retit-gold) 10%, var(--retit-surface));
+  color: var(--retit-gold-text);
+  border-color: color-mix(
+    in srgb,
+    var(--retit-gold) 35%,
+    var(--retit-surface)
+  );
+}
+.rank-2 .rank-badge {
+  background: color-mix(in srgb, var(--retit-silver) 10%, var(--retit-surface));
+  color: var(--retit-text);
+  border-color: color-mix(
+    in srgb,
+    var(--retit-silver) 30%,
+    var(--retit-surface)
+  );
+}
+.rank-3 .rank-badge {
+  background: color-mix(in srgb, var(--retit-bronze) 10%, var(--retit-surface));
+  color: var(--retit-bronze-text);
+  border-color: color-mix(
+    in srgb,
+    var(--retit-bronze) 30%,
+    var(--retit-surface)
+  );
+}
+
+.team-icon {
+  font-size: 1.6em;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.team-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.team-name {
+  display: block;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.team-color-bar {
+  display: block;
+  background: var(--team-color);
+  height: 2px;
+  border-radius: 1px;
+  margin-top: 4px;
+  width: 28px;
+}
+
+.achievements {
+  display: flex;
+  align-items: center;
+  gap: 0.3em;
+}
+
+.more-achievements {
+  font-size: 0.8em;
+  font-weight: 600;
+  color: var(--retit-text-light);
+  white-space: nowrap;
+  cursor: help;
+}
+
+.card gsc-sparkline {
+  flex-shrink: 0;
+  --sparkline-color: var(--team-color);
+}
+
+.metrics {
+  display: flex;
+  gap: 2em;
+  align-items: center;
+}
+
+.metric {
+  text-align: right;
+}
+
+.metric .value {
+  display: block;
+  font-size: 1.05em;
+  font-weight: 600;
+}
+
+.metric .label {
+  display: block;
+  font-size: 0.68em;
+  color: var(--retit-text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 1px;
+  font-weight: 400;
+}
+
+.reduction.positive {
+  color: var(--retit-green-dark);
+}
+.reduction.negative {
+  color: var(--retit-red);
+}
+.reduction.neutral {
+  color: var(--retit-text-light);
+}
+
+.chevron {
+  font-size: 0.7em;
+  color: var(--retit-text-light);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.card[open] .chevron {
+  transform: rotate(180deg);
+}
+
+/* Expanded card */
+
+.expand-section {
+  margin: 0 1.5em;
+  padding: 1em 0;
+  border-top: 1px solid var(--retit-border);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1em;
+}
+
+.expand-label {
+  font-size: 0.7em;
+  font-weight: 600;
+  color: var(--retit-text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.4em;
+}
+
+.share-bar-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75em;
+  color: var(--retit-text-light);
+  font-weight: 400;
+  margin-bottom: 0.3em;
+}
+
+.share-bar-label span:last-child {
+  color: var(--retit-text);
+  font-weight: 600;
+}
+
+.share-bar-track {
+  height: 5px;
+  background: var(--retit-border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.share-bar-fill {
+  background: var(--team-color);
+  height: 100%;
+  border-radius: 3px;
+}
+
+.provider-breakdown {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6em;
+}
+
+.provider-chip {
+  background: var(--retit-bg);
+  border: 1px solid var(--retit-border);
+  border-radius: 3px;
+  padding: 0.65em 0.75em;
+  text-align: center;
+}
+
+.pname {
+  font-size: 0.7em;
+  color: var(--retit-text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 400;
+  margin-bottom: 0.25em;
+}
+
+.pvalue {
+  font-size: 0.95em;
+  font-weight: 600;
+}
+
+/* Keeps its size until the chart is loaded */
+gsc-history-chart {
+  display: block;
+  position: relative;
+  height: 200px;
+  /* The message if it can't be loaded */
+  font-size: 0.875em;
+  color: var(--retit-text-light);
+}
+
+gsc-history-chart a {
+  color: inherit;
+}
+
+@media (scripting: none) {
+  .history {
+    display: none;
+  }
+}
+
+.achievement-list {
+  display: flex;
+  gap: 0.5em;
+  flex-wrap: wrap;
+}
+
+/* Badge of a group of achievements */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  background: color-mix(in srgb, var(--retit-gold) 10%, var(--retit-surface));
+  border: 1px solid
+    color-mix(in srgb, var(--retit-gold) 35%, var(--retit-surface));
+  border-radius: 3px;
+  padding: 0.15em 0.6em;
+  font-size: 0.78em;
+  font-weight: 400;
+  color: var(--retit-gold-text);
+  white-space: nowrap;
+  cursor: help;
+  letter-spacing: 0.01em;
+}
+
+.badge.compact {
+  padding: 0.1em 0.25em;
+  font-size: 1em;
+  background: transparent;
+  border: none;
+}
+
+.badge .icon {
+  line-height: 1;
+}
+.badge .title {
+  font-size: 0.9em;
+}
+.badge .tier {
+  font-size: 0.9em;
+  font-weight: 600;
+}
+.badge .count {
+  font-size: 0.8em;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.badge.compact .count {
+  font-size: 0.6em;
+  align-self: flex-end;
+}

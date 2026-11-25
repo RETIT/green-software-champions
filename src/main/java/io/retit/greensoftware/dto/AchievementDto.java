@@ -1,7 +1,6 @@
 package io.retit.greensoftware.dto;
 
-import io.retit.greensoftware.entity.Achievement;
-import io.retit.greensoftware.service.AchievementService;
+import io.retit.greensoftware.service.AwardedAchievement;
 
 public class AchievementDto {
 
@@ -30,18 +29,18 @@ public class AchievementDto {
     /** The value the achievement was awarded for, e.g. the reduction in percent, or null. */
     public Double measuredValue;
 
-    public static AchievementDto from(Achievement achievement) {
+    public static AchievementDto from(AwardedAchievement achievement) {
         AchievementDto dto = new AchievementDto();
-        dto.id = achievement.id;
-        dto.title = achievement.title;
-        dto.description = achievement.description;
-        dto.criteria = achievement.type != null ? AchievementService.criteria(achievement.type) : null;
-        dto.badgeIcon = achievement.badgeIcon;
-        dto.period = achievement.period;
-        dto.type = achievement.type != null ? achievement.type.name() : null;
-        dto.threshold = achievement.threshold;
-        dto.tier = achievement.type != null ? AchievementService.tier(achievement.type, achievement.threshold) : null;
-        dto.measuredValue = achievement.measuredValue;
+        dto.id = achievement.id();
+        dto.title = achievement.title();
+        dto.description = achievement.description();
+        dto.criteria = achievement.criteria();
+        dto.badgeIcon = achievement.badgeIcon();
+        dto.period = achievement.period();
+        dto.type = achievement.type() != null ? achievement.type().name() : null;
+        dto.threshold = achievement.threshold();
+        dto.tier = achievement.tier();
+        dto.measuredValue = achievement.measuredValue();
         return dto;
     }
 }

@@ -1,0 +1,67 @@
+{#include layout}
+{#include summary /}
+<div class="section-header">
+  <h2>🗺️ Carbon Footprint World Map</h2>
+  <div class="section-meta">{summary.period}</div>
+</div>
+
+<gsc-world-map>
+  <svg viewBox="0 0 960 500">
+    <rect class="ocean" width="960" height="500"/>
+    <path class="graticule" d="M0,27.78H960 M0,83.33H960 M0,138.89H960 M0,194.44H960 M0,250H960 M0,305.56H960 M0,361.11H960 M0,416.67H960 M0,472.22H960 M53.33,0V500 M160,0V500 M266.67,0V500 M373.33,0V500 M480,0V500 M586.67,0V500 M693.33,0V500 M800,0V500 M906.67,0V500"/>
+    <g class="land">
+      <path d="M 115,80 L 200,70 L 280,80 L 300,100 L 320,140 L 340,180 L 310,220 L 280,260 L 250,280 L 220,290 L 200,280 L 180,260 L 160,240 L 140,220 L 120,200 L 100,180 L 90,150 L 95,120 Z"/>
+      <path d="M 250,280 L 270,300 L 260,320 L 240,310 L 230,295 Z"/>
+      <path d="M 260,320 L 300,320 L 340,340 L 360,380 L 370,420 L 350,460 L 320,480 L 290,470 L 270,440 L 255,400 L 240,360 L 245,330 Z"/>
+      <path d="M 420,80 L 500,75 L 530,90 L 540,110 L 520,130 L 500,140 L 480,145 L 460,140 L 440,130 L 430,110 Z"/>
+      <path d="M 470,55 L 500,50 L 510,70 L 495,90 L 475,85 Z"/>
+      <path d="M 400,90 L 415,85 L 420,100 L 408,108 Z"/>
+      <path d="M 420,120 L 445,115 L 450,140 L 430,148 L 418,135 Z"/>
+      <path d="M 440,150 L 520,145 L 560,170 L 575,210 L 565,270 L 540,330 L 510,370 L 490,390 L 470,375 L 450,340 L 435,300 L 428,250 L 430,200 L 435,170 Z"/>
+      <path d="M 530,130 L 590,125 L 610,145 L 600,170 L 570,175 L 540,165 L 530,148 Z"/>
+      <path d="M 490,60 L 600,50 L 700,55 L 760,65 L 780,85 L 750,100 L 700,105 L 640,100 L 580,95 L 530,90 L 510,75 Z"/>
+      <path d="M 620,150 L 680,145 L 700,165 L 700,200 L 680,230 L 660,240 L 640,225 L 625,200 L 615,175 Z"/>
+      <path d="M 730,190 L 780,185 L 800,205 L 790,230 L 760,235 L 735,220 Z"/>
+      <path d="M 760,250 L 810,245 L 840,255 L 845,270 L 810,275 L 770,268 Z"/>
+      <path d="M 720,90 L 800,85 L 840,100 L 850,130 L 830,160 L 800,170 L 760,165 L 730,145 L 715,120 Z"/>
+      <path d="M 855,100 L 870,95 L 880,115 L 865,125 L 852,112 Z"/>
+      <path d="M 750,320 L 840,315 L 880,335 L 890,370 L 870,405 L 830,420 L 790,415 L 760,390 L 745,355 L 745,330 Z"/>
+      <path d="M 895,400 L 905,390 L 912,405 L 905,418 L 895,412 Z"/>
+      <path d="M 295,30 L 340,20 L 370,35 L 365,60 L 340,70 L 310,65 L 295,50 Z"/>
+    </g>
+    {#for bubble in bubbles}
+    <g class="team-bubble" data-rank="{bubble.rank}">
+      {#if bubble.pulse}
+      <circle class="pulse-ring" cx="{bubble.x}" cy="{bubble.y}" r="{bubble.r}" stroke="{bubble.color}" opacity="0.5"/>
+      {/if}
+      <circle cx="{bubble.x}" cy="{bubble.y}" r="{bubble.r}" fill="{bubble.color}" stroke="{bubble.color}" stroke-width="1.5"/>
+      <text x="{bubble.x}" y="{bubble.y}">{bubble.icon}</text>
+      <text class="team-label" x="{bubble.x}" y="{bubble.labelY}">{bubble.name}</text>
+    </g>
+    {/for}
+  </svg>
+  {! The tooltips, with the ranks of their bubbles !}
+  {#for bubble in bubbles}
+  <template data-rank="{bubble.rank}">
+    <div class="tooltip-name">{bubble.icon} {bubble.name}</div>
+    <div class="tooltip-row"><span>CO₂e</span><span>{bubble.total}</span></div>
+    <div class="tooltip-row"><span>Company share</span><span>{bubble.share}</span></div>
+    <div class="tooltip-row"><span>Change</span><span class="{bubble.trend.cssClass}">{bubble.reduction}</span></div>
+    {#if bubble.badges}
+    <div class="tooltip-row tooltip-achievements">
+      {#for badge in bubble.badges}
+      <span>{badge.icon}</span>
+      {/for}
+    </div>
+    {/if}
+  </template>
+  {/for}
+</gsc-world-map>
+
+<div class="map-legend">
+  <span>Bubble size = share of company cloud carbon</span>
+  <span class="legend-item"><span class="legend-circle small"></span> Smaller share</span>
+  <span class="legend-item"><span class="legend-circle large"></span> Larger share</span>
+  <span>📍 Bubbles positioned at primary cloud region</span>
+</div>
+{/include}

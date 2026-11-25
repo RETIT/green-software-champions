@@ -1,0 +1,9 @@
+{#include layout}
+<div class="notice error">
+  <span>⚠️</span>
+  <span>
+    {error.message}
+    {#if error.linkUrl}<a href="{error.linkUrl}">{error.linkLabel}</a>{/if}
+  </span>
+</div>
+{/include}

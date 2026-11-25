@@ -14,6 +14,7 @@ import io.retit.greensoftware.entity.Team;
 import io.retit.greensoftware.util.PeriodRange;
 import io.retit.greensoftware.util.Periods;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
@@ -22,9 +23,7 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /** Syncs the teams' emissions from the enabled cloud providers into the database. */
 @ApplicationScoped
@@ -43,6 +42,9 @@ public class CarbonDataService {
 
     @Inject
     AchievementService achievementService;
+
+    @Inject
+    Event<DashboardDataChanged> dataChanged;
 
     @Inject
     CarbonSyncConfig syncConfig;
@@ -65,7 +67,7 @@ public class CarbonDataService {
 
     /**
      * Syncs all teams for {@code range}, then evaluates the achievements of the newly
-     * complete periods.
+     * complete periods and fires {@link DashboardDataChanged}.
      *
      * <p>Runs outside of any transaction, so that no transaction holds a database
      * connection or runs into its timeout while the provider APIs are called. Reading the
@@ -78,14 +80,19 @@ public class CarbonDataService {
             return;
         }
         LOG.infof("Starting carbon data sync for periods %s", range);
-        for (TeamProjects team : findTeamProjects()) {
-            Map<String, ProviderCo2Kg> co2KgByPeriod = fetchTeamData(team, range);
-            if (!co2KgByPeriod.isEmpty()) {
-                storeTeamData(team.teamId(), co2KgByPeriod);
+        try {
+            for (TeamProjects team : findTeamProjects()) {
+                Map<String, Emissions> emissionsByPeriod = fetchTeamData(team, range);
+                if (!emissionsByPeriod.isEmpty()) {
+                    storeTeamData(team.teamId(), emissionsByPeriod);
+                }
             }
+            LOG.infof("Carbon data sync complete for periods %s", range);
+            evaluateNewCompletePeriods(range.periods());
+        } finally {
+            // Also after a failure, as the teams stored before it are kept
+            dataChanged.fire(new DashboardDataChanged());
         }
-        LOG.infof("Carbon data sync complete for periods %s", range);
-        evaluateNewCompletePeriods(range.periods());
     }
 
     /** A team and its cloud projects by provider, read at the start of a sync. */
@@ -95,9 +102,6 @@ public class CarbonDataService {
             return projectsByProvider.getOrDefault(provider, List.of());
         }
     }
-
-    /** A team's emissions in one period by provider, null for each provider it has no data from. */
-    record ProviderCo2Kg(Double awsCo2Kg, Double azureCo2Kg, Double gcpCo2Kg) {}
 
     /** The projects are detached afterwards, which is fine as the providers only read their IDs. */
     @Transactional
@@ -115,7 +119,7 @@ public class CarbonDataService {
      *
      * @return the emissions by period, oldest first
      */
-    private Map<String, ProviderCo2Kg> fetchTeamData(TeamProjects team, PeriodRange range) {
+    private Map<String, Emissions> fetchTeamData(TeamProjects team, PeriodRange range) {
         Map<String, Double> awsCo2Kg;
         Map<String, Double> azureCo2Kg;
         Map<String, Double> gcpCo2Kg;
@@ -129,28 +133,28 @@ public class CarbonDataService {
             return Map.of();
         }
 
-        Map<String, ProviderCo2Kg> co2KgByPeriod = new LinkedHashMap<>();
+        Map<String, Emissions> emissionsByPeriod = new LinkedHashMap<>();
         for (String period : range.periods()) {
             if (isMissing(awsCo2Kg, period) || isMissing(azureCo2Kg, period) || isMissing(gcpCo2Kg, period)) {
                 LOG.warnf("Skipping team '%s' for period %s, keeping its existing data: "
                         + "not every provider's data could be fetched", team.teamName(), period);
                 continue;
             }
-            co2KgByPeriod.put(period, new ProviderCo2Kg(
+            emissionsByPeriod.put(period, Emissions.ofProviders(
                     co2KgIn(awsCo2Kg, period), co2KgIn(azureCo2Kg, period), co2KgIn(gcpCo2Kg, period)));
         }
-        return co2KgByPeriod;
+        return emissionsByPeriod;
     }
 
     /** One transaction per team, so that the teams already stored are kept if a later one fails. */
     @Transactional
-    void storeTeamData(Long teamId, Map<String, ProviderCo2Kg> co2KgByPeriod) {
+    void storeTeamData(Long teamId, Map<String, Emissions> emissionsByPeriod) {
         Team team = Team.findById(teamId);
         if (team == null) {
             // Deleted since the sync started
             return;
         }
-        co2KgByPeriod.forEach((period, co2Kg) -> storeCarbonEntry(team, period, co2Kg));
+        emissionsByPeriod.forEach((period, emissions) -> storeCarbonEntry(team, period, emissions));
     }
 
     /**
@@ -183,29 +187,18 @@ public class CarbonDataService {
                 .forEach(p -> LOG.infof("Data for period %s is incomplete, skipping achievement evaluation.", p));
     }
 
-    private void storeCarbonEntry(Team team, String period, ProviderCo2Kg co2Kg) {
-        Double awsCo2Kg = co2Kg.awsCo2Kg();
-        Double azureCo2Kg = co2Kg.azureCo2Kg();
-        Double gcpCo2Kg = co2Kg.gcpCo2Kg();
-        // Null rather than 0 without any provider data, so it is not mistaken for zero emissions
-        Double totalCo2Kg = Stream.of(awsCo2Kg, azureCo2Kg, gcpCo2Kg)
-                .filter(Objects::nonNull)
-                .reduce(Double::sum)
-                .orElse(null);
-
+    private void storeCarbonEntry(Team team, String period, Emissions emissions) {
         CarbonEntry entry = CarbonEntry.findByTeamAndPeriod(team, period)
                 .orElse(new CarbonEntry());
         entry.team = team;
         entry.period = period;
-        entry.totalCo2Kg = totalCo2Kg;
-        entry.awsCo2Kg = awsCo2Kg;
-        entry.azureCo2Kg = azureCo2Kg;
-        entry.gcpCo2Kg = gcpCo2Kg;
+        emissions.copyTo(entry);
         entry.syncTimestamp = Instant.now();
         entry.persist();
 
         LOG.infof("Synced team '%s' for period %s: %.2f kg CO2e (AWS=%.2f, Azure=%.2f, GCP=%.2f)",
-                team.name, period, totalCo2Kg, awsCo2Kg, azureCo2Kg, gcpCo2Kg);
+                team.name, period, emissions.totalCo2Kg(),
+                emissions.awsCo2Kg(), emissions.azureCo2Kg(), emissions.gcpCo2Kg());
     }
 
     /**

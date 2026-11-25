@@ -20,14 +20,6 @@ public final class Reductions {
         return percent(perDay(previousCo2Kg, Periods.previous(period)), perDay(co2Kg, period));
     }
 
-    /** {@link #fromPrevious} between two entries; {@code previous} may be null. */
-    public static Double between(CarbonEntry previous, CarbonEntry entry) {
-        if (previous == null) {
-            return null;
-        }
-        return percent(perDay(previous.totalCo2Kg, previous.period), perDay(entry.totalCo2Kg, entry.period));
-    }
-
     /** Null if {@code entry} or its total is missing. */
     public static Double perDay(CarbonEntry entry) {
         return entry != null ? perDay(entry.totalCo2Kg, entry.period) : null;

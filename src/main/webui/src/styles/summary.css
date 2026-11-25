@@ -1,0 +1,58 @@
+.summary-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.25em;
+  margin-bottom: 2em;
+}
+
+.summary-card {
+  background: var(--retit-surface);
+  border-radius: 3px;
+  box-shadow: var(--retit-shadow);
+  padding: 1.25em 1.5em;
+  display: flex;
+  align-items: flex-start;
+  gap: 1em;
+}
+
+.summary-icon {
+  font-size: 1.4em;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 0.15em;
+}
+
+.summary-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.summary-card .value {
+  font-size: 1.6em;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+.summary-card .value.positive {
+  color: var(--retit-green-dark);
+}
+.summary-card .value.negative {
+  color: var(--retit-red);
+}
+
+.summary-card .label {
+  font-size: 0.72em;
+  font-weight: 400;
+  color: var(--retit-text-light);
+  margin-top: 0.35em;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.summary-card gsc-sparkline {
+  width: 100%;
+  height: 2.5em;
+  --sparkline-color: var(--retit-text-light);
+  --sparkline-marker-color: var(--retit-green);
+}

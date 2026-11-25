@@ -29,7 +29,7 @@ public class LeaderboardResource {
                description = "Returns all teams ranked by their total cloud carbon footprint for the given period.")
     public List<LeaderboardEntryDto> getLeaderboard(
             @QueryParam("period") @DefaultValue("") String period) {
-        return leaderboardService.getLeaderboard(period);
+        return LeaderboardEntryDto.from(leaderboardService.getLeaderboard(period));
     }
 
     /** @param period like {@link #getLeaderboard}; the response names the resolved period */
@@ -39,13 +39,13 @@ public class LeaderboardResource {
                description = "Returns aggregated carbon footprint data across all teams for the given period.")
     public CarbonSummaryDto getSummary(
             @QueryParam("period") @DefaultValue("") String period) {
-        return leaderboardService.getCompanySummary(period);
+        return CarbonSummaryDto.from(leaderboardService.getCompanySummary(period));
     }
 
     @GET
     @Path("/teams")
     @Operation(summary = "Get all teams", description = "Returns all teams and their configured cloud projects.")
     public List<TeamDto> getTeams() {
-        return leaderboardService.getAllTeams();
+        return leaderboardService.getAllTeams().stream().map(TeamDto::from).toList();
     }
 }

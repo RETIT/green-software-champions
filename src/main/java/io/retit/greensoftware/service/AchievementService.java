@@ -7,6 +7,8 @@ import io.retit.greensoftware.entity.Team;
 import io.retit.greensoftware.util.Periods;
 import io.retit.greensoftware.util.Reductions;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Event;
+import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
 
@@ -59,6 +61,9 @@ public class AchievementService {
 
     /** Annual Improver: the thresholds, as minimum reductions in percent, ascending. */
     private static final List<Integer> ANNUAL_IMPROVER_THRESHOLDS = List.of(10, 25, 50);
+
+    @Inject
+    Event<DashboardDataChanged> dataChanged;
 
     @Transactional
     public void evaluateAchievements(String period) {
@@ -362,10 +367,19 @@ public class AchievementService {
                 : String.join(", ", names.subList(0, names.size() - 1)) + " or " + names.getLast();
     }
 
-    /** For the current period. Unlike the rule-based achievements, any number per period. */
+    /**
+     * For the current period. Unlike the rule-based achievements, any number per period.
+     * Fires {@link DashboardDataChanged}.
+     *
+     * @return empty if there is no such team
+     */
     @Transactional
-    public Achievement grantCustomAchievement(Team team, String title, String description,
-                                               String badgeIcon) {
+    public Optional<AwardedAchievement> grantCustomAchievement(Long teamId, String title, String description,
+                                                               String badgeIcon) {
+        Team team = Team.findById(teamId);
+        if (team == null) {
+            return Optional.empty();
+        }
         Achievement achievement = new Achievement();
         achievement.team = team;
         achievement.type = AchievementType.CUSTOM;
@@ -374,6 +388,7 @@ public class AchievementService {
         achievement.badgeIcon = badgeIcon;
         achievement.period = Periods.current();
         achievement.persist();
-        return achievement;
+        dataChanged.fire(new DashboardDataChanged());
+        return Optional.of(AwardedAchievement.of(achievement));
     }
 }

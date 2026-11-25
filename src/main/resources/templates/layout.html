@@ -1,0 +1,109 @@
+{@io.retit.greensoftware.web.render.Layout layout}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Green Software Champions | RETIT</title>
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌿</text></svg>"
+    >
+    {#for style in layout.assets.styles}
+    <link rel="stylesheet" href="{style}">
+    {/for}
+    {#for script in layout.assets.scripts}
+    <script type="module" src="{script}"></script>
+    {/for}
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="logo">
+        <span class="logo-icon">
+          <svg width="105" height="32" viewBox="0 0 548.46 167.22" role="img" aria-label="RETIT">
+            <path
+              fill="#a7a9ac"
+              stroke="#a7a9ac"
+              stroke-width="15"
+              stroke-linejoin="miter"
+              stroke-miterlimit="10"
+              d="M494.23 159.6H468.89V31.19l-90.56-.18V7.54l162.5.17V31.19h-46.6V159.6zM405.93 159.19H380.58V57.51h25.35V73.23v85.96z"
+            />
+            <path
+              fill="#71bf44"
+              stroke="#71bf44"
+              stroke-width="15"
+              stroke-linejoin="miter"
+              stroke-miterlimit="10"
+              d="M31.12 75.09H60.49C69.01 75.09 75.34 73.01 79.5 68.85 83.66 64.7 85.74 58.99 85.74 51.72c0-6.68-2.05-12.07-6.14-16.19C75.5 31.41 69.77 29.35 62.41 29.35H31.12V75.09zm118.02 84.19H124.18L64.34 97.01H31.12v62.42H7.5V7.54H64.34c15.8.0 27.42 4.14 34.84 12.41C106.61 28.22 110.32 38.92 110.32 52.05 110.32 71.56 102.45 84.99 86.7 92.33l62.44 66.95zM233.15 159.43H148V7.54h84.29V30.13H171.62V71.3h48.76V93.33H171.62v42.51h61.53v23.59zm86.31.0H294.11V31.02H186.63V7.54H366.31V31.02H319.46V159.43z"
+            />
+          </svg>
+        </span>
+        <span class="logo-text">
+          <span class="logo-sep">|</span>
+          <span class="logo-sub">Green Software Champions</span>
+        </span>
+      </div>
+
+      {#if layout.nav}
+      <nav class="site-nav">
+        {#for link in layout.nav}
+        <a class="nav-link" href="{link.url}"{#if link.active} aria-current="page"{/if}>{link.label}</a>
+        {/for}
+      </nav>
+      {/if}
+
+      <div class="header-end">
+        {#if layout.periodPicker}
+        <form class="period-form" method="get" action="{layout.periodPicker.action}">
+          <label for="period">Period</label>
+          {! Firefox would otherwise restore the last choice on a reload !}
+          <select id="period" name="period" autocomplete="off">
+            {#for option in layout.periodPicker.options}
+            <option value="{option.period}"{#if option.selected} selected{/if}>{option.label}</option>
+            {/for}
+          </select>
+          <noscript><button>Show</button></noscript>
+        </form>
+        {/if}
+        {#if layout.logoutUrl}
+        {! Quarkus ends the session here and at the identity provider !}
+        <a class="logout" href="{layout.logoutUrl}">Log out</a>
+        {/if}
+      </div>
+    </header>
+
+    <div class="hero">
+      <div class="hero-inner">
+        <h1>
+          We track cloud carbon footprints,<br>
+          <span>across all your teams</span>
+        </h1>
+        <p>
+          Compete, reduce and champion sustainable software engineering with
+          RETIT Green Software Champions.
+        </p>
+      </div>
+    </div>
+
+    <main>
+      {#if layout.demo}
+      <div class="notice">
+        <span>🧪</span>
+        <span>
+          <strong>Demo data:</strong> these teams and emissions are made up.
+          <a href="{Routes:LEADERBOARD}">Show your teams</a>
+        </span>
+      </div>
+      {/if}
+      {#insert /}
+    </main>
+
+    <footer>
+      Powered by
+      <a href="https://www.retit.io" target="_blank" rel="noopener">RETIT GmbH</a>
+      &nbsp;·&nbsp; Green Software Champions &nbsp;·&nbsp; Cloud Carbon Footprint Tracking
+    </footer>
+  </body>
+</html>

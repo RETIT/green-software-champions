@@ -1,5 +1,7 @@
 package io.retit.greensoftware.dto;
 
+import io.retit.greensoftware.service.CompanySummary;
+
 import java.util.List;
 
 /** Company-wide emissions in {@link #period}. */
@@ -19,4 +21,15 @@ public class CarbonSummaryDto {
 
     /** Periods up to and including {@link #period}, oldest first. */
     public List<CarbonHistoryPointDto> history;
+
+    public static CarbonSummaryDto from(CompanySummary summary) {
+        CarbonSummaryDto dto = new CarbonSummaryDto();
+        dto.period = summary.period();
+        dto.totalCo2Kg = summary.totalCo2Kg();
+        dto.previousTotalCo2Kg = summary.previousTotalCo2Kg();
+        dto.reductionPercent = summary.reductionPercent();
+        dto.teamCount = summary.teamCount();
+        dto.history = summary.history().stream().map(CarbonHistoryPointDto::from).toList();
+        return dto;
+    }
 }

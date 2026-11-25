@@ -4,11 +4,9 @@ import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.persistence.*;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "carbon_entries",
@@ -43,16 +41,7 @@ public class CarbonEntry extends PanacheEntity {
         return find("team = ?1 and period = ?2", team, period).firstResultOptional();
     }
 
-    public static List<CarbonEntry> findByPeriod(String period) {
-        return list("period", period);
-    }
-
-    public static Map<Long, CarbonEntry> findByPeriodByTeamId(String period) {
-        return findByPeriod(period).stream()
-                .collect(Collectors.toMap(e -> e.team.id, Function.identity()));
-    }
-
-    public static List<CarbonEntry> findByPeriods(List<String> periods) {
+    public static List<CarbonEntry> findByPeriods(Collection<String> periods) {
         return list("period in ?1", periods);
     }
 
@@ -73,6 +62,13 @@ public class CarbonEntry extends PanacheEntity {
                         + " order by e.period desc", String.class)
                 .setParameter("periods", periods)
                 .setParameter("teamCount", Team.count())
+                .getResultList();
+    }
+
+    /** The periods with entries, latest first. */
+    public static List<String> findPeriods() {
+        return getEntityManager()
+                .createQuery("select distinct e.period from CarbonEntry e order by e.period desc", String.class)
                 .getResultList();
     }
 

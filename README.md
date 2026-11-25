@@ -9,6 +9,9 @@ ranks the teams, shows their history and awards achievements for reductions.
 - **Leaderboard** of all teams for a month, lowest emissions first, with the
   change against the previous month and a company-wide summary
 - **History charts** of the last 13 months per team, plus a world-map view
+- **Prerendered pages**: HTML rendered when the data changes and then served from
+  memory, with JavaScript only for the charts and tooltips (see
+  [Rendering](#rendering))
 - **Achievements**, evaluated once every team has data for a month:
 
   | Achievement           | Awarded for                                                     | Requires                                               |
@@ -25,15 +28,16 @@ ranks the teams, shows their history and awards achievements for reductions.
 
 **Sample data:** to try it without a cloud account, dev mode generates sample
 emissions for the teams and evaluates their achievements, as long as no cloud
-provider is enabled (see [Sample data](#sample-data)).
+provider is enabled (see [Sample data](#sample-data)). The pages `/demo` and
+`/demo/map` show made-up teams in any mode, without touching the database.
 
 **Cloud providers:** AWS is supported through the AWS Sustainability API. The
 GCP provider, based on the Carbon Footprint export to BigQuery, and the Azure
 provider are under development.
 
-**Tech stack:** Quarkus 3 (Java 25), H2 (embedded, file-based) with Flyway,
-login via OpenID Connect (e.g. Keycloak), and a Lit + TypeScript frontend built
-with Vite and served by Quarkus through Quinoa.
+**Tech stack:** Quarkus 3 (Java 25) with Qute templates, H2 (embedded,
+file-based) with Flyway, login via OpenID Connect (e.g. Keycloak), and a little
+Lit + TypeScript, built with Vite and served by Quarkus through Quinoa.
 
 ## Prerequisites
 
@@ -67,11 +71,13 @@ Then open <http://localhost:8080>. On the first start this:
 Security checks are off in dev mode, so you don't need to log in, neither in the
 UI nor for the API. To try the login, start dev mode with
 `QUARKUS_SECURITY_AUTH_ENABLED_IN_DEV_MODE=true mvn quarkus:dev` and log in as
-`developer` or `admin`. Code changes in Java and TypeScript are reloaded live.
+`developer` or `admin`. Changes of the Java code, the templates and the frontend
+show up after reloading the page, those of the frontend even without.
 
 | URL                                   | What                               |
 |---------------------------------------|------------------------------------|
 | <http://localhost:8080>               | the dashboard                      |
+| <http://localhost:8080/demo>          | the dashboard with demo data       |
 | <http://localhost:8080/q/dev-ui>      | Quarkus Dev UI (incl. Keycloak)    |
 | <http://localhost:8080/q/swagger-ui>  | REST API docs (dev mode only)      |
 | <http://localhost:8080/q/health>      | health checks                      |
@@ -99,7 +105,8 @@ the repository already disables it in
 Dev mode seeds sample emissions at every start in which no cloud provider is
 enabled, i.e. none of `AWS_ENABLED`, `GCP_ENABLED` and `AZURE_ENABLED` is
 `true`, also not in the `.env` file. The packaged application and the tests
-never seed any.
+never seed any. The demo pages use the same generator, but for teams of their
+own, which are ranked like the real ones but not stored.
 
 - **Teams:** every team in the database, the sample teams or those of your own
   [teams file](#teams-file), with values only for the providers each team has
@@ -213,6 +220,9 @@ to which `/.well-known/openid-configuration` is appended. The provider needs:
 - the roles `user`, for the dashboard, and `admin`, for the admin API, in its
   tokens (see [Other providers](#other-providers)).
 
+The login redirects back to the page it was started from. For a provider without
+wildcards in redirect URIs, register `/`, `/map`, `/demo` and `/demo/map`.
+
 Users without the role `user` can log in, but are told that they have no
 access. The admin API only accepts access tokens, not the dashboard's session
 (see [Admin API](#admin-api)).
@@ -250,14 +260,13 @@ ID). Depending on the provider, also set:
 | `QUARKUS_OIDC_ROLES_SOURCE=idtoken`      | The access token of the login isn't meant for this application, so it can't be verified: Entra ID (it's for Microsoft Graph), Okta's org authorization server, Auth0 (opaque). The provider must put the roles in the ID token. |
 | `QUARKUS_OIDC_ROLES_ROLE_CLAIM_PATH`     | The roles are in another claim, e.g. one an Auth0 Action adds. Replaces the three claims above.                                                                                                                            |
 | [roles mapping](#roles-mapping)          | The roles have other names, e.g. groups of the whole organisation or the group IDs of Entra ID.                                                                                                                             |
-| `QUARKUS_OIDC_AUTHENTICATION_SCOPES`     | Further scopes, comma-separated: `offline_access` for refresh tokens (all but Keycloak, which issues them anyway), `profile` for the user name (Entra ID), `groups` (Okta).                                               |
+| `QUARKUS_OIDC_AUTHENTICATION_SCOPES`     | Further scopes, comma-separated: `offline_access` for refresh tokens (all but Keycloak, which issues them anyway), `groups` (Okta).                                                                                       |
 | `OIDC_AUDIENCE`                          | Other applications' tokens come from the same issuer, e.g. all apps of an Entra ID tenant. See below.                                                                                                                     |
-| `QUARKUS_OIDC_TOKEN_PRINCIPAL_CLAIM`     | The tokens have neither `upn` nor `preferred_username`, so the dashboard would show the `sub` claim as user name, e.g. with Auth0: set it to `email`.                                                                      |
 | `QUARKUS_OIDC_END_SESSION_PATH`          | The provider's discovery document has no `end_session_endpoint`, needed for the logout.                                                                                                                                    |
 
-Without a refresh token, the login session ends with the ID token. The
-dashboard then reloads, which leads through the provider's login back to it
-without asking for the password while the provider's own session is active.
+Without a refresh token, the login session ends with the ID token. The next
+page then leads through the provider's login back to it, without asking for the
+password while the provider's own session is active.
 Don't request `offline_access` from Keycloak, whose offline tokens outlive the
 Keycloak session.
 
@@ -357,6 +366,9 @@ curl -X POST http://localhost:8080/api/admin/sync/2026-10
 curl -X POST http://localhost:8080/api/admin/teams/1/achievements \
   -H 'Content-Type: application/json' \
   -d '{"title": "Cleanup Hero", "description": "Deleted 40 idle VMs", "badgeIcon": "🧹"}'
+
+# Render the pages again, only needed after rendering has failed
+curl -X POST http://localhost:8080/api/admin/pages/rebuild
 ```
 
 The team IDs are listed by `GET /api/leaderboard/teams`. Outside dev mode, add
@@ -366,6 +378,42 @@ doesn't accept the session cookie of the dashboard, so that no other website
 can make a logged-in admin's browser call it (CSRF); without a token, it
 redirects to the login.
 
+## Rendering
+
+The pages are rendered on the server (Qute) and the same for everyone with the
+role `user`, as they contain no user data:
+
+- `/` and `/map` show the latest month that all teams have data for. They are
+  rendered at startup and whenever the data changes: after a sync, even if it
+  fails halfway, and after granting a custom achievement.
+- `/?period=2026-03` and `/map?period=2026-03` show another month with data.
+  They are rendered at the first request and kept until the data changes.
+- `/demo` and `/demo/map` show demo data. They are rendered at the first request
+  and kept until the month changes.
+
+The pages are kept in memory, also compressed with gzip; the scripts, styles and
+the API's responses are compressed when they are sent. Browsers ask with every
+navigation whether their copy is still current (`ETag`), so changes are visible
+on the next page, but not in tabs that are already open. If rendering fails, the
+previous pages are kept and the error is logged;
+`POST /api/admin/pages/rebuild` tries again. If it fails at startup, so that there
+are no previous pages, the next request tries again.
+
+Services that change the data fire the CDI event `DashboardDataChanged`, which
+renders the pages after the commit, before the change returns to its caller.
+
+The packaged application refuses to start without the scripts and styles, i.e. if
+it was built with Quinoa disabled.
+
+Numbers and months are always in English. JavaScript only adds the tooltips of
+the trend lines and the map, and the history chart, whose code is loaded once a
+team's card is opened. If it can't be loaded, e.g. as the session has expired, the
+card links to a reload. Everything else works without JavaScript.
+
+The start of a month doesn't render the pages again. That only matters if no
+month of the history is complete, e.g. with a new team that has no data yet: the
+pages then show the previous month as of the last rendering.
+
 ## Tests
 
 ```bash
@@ -374,8 +422,10 @@ mvn test
 
 The tests use an in-memory H2 database and the sample teams. Keycloak, the
 cloud providers and the scheduler are disabled, so no network, container
-runtime or Node.js is needed. Only `SecurityTest` enables OIDC, against a fake
-OIDC server (WireMock), and logs in through its login form with HtmlUnit. Only the tests of the GCP provider enable it,
+runtime or Node.js is needed; the pages just have no scripts and styles then.
+The tests of the login and the pages (`SecurityTest`, `PageResourceTest`,
+`PageRefreshTest`) enable OIDC, against a fake OIDC server (WireMock), and
+`SecurityTest` logs in through its login form with HtmlUnit. Only the tests of the GCP provider enable it,
 against a fake of the BigQuery API and Google's token endpoint that the
 application under test serves itself. As it only serves the fake once started,
 these tests turn off the check of the export and the sync at startup, and call
@@ -408,13 +458,19 @@ src/main/java/io/retit/greensoftware/
   client/               cloud provider clients (AWS SDK, REST clients of Azure and BigQuery)
   config/               typed configuration (teams, providers, sync, history)
   resource/             REST endpoints (/api/leaderboard, /api/admin)
+  dto/                  the JSON of the REST API, separate from what the pages show
   scheduler/            startup sync or sample data seeding, monthly sync
-  service/              sync, achievements, leaderboard, team setup, dev sample data
+  service/              sync, achievements, leaderboard, team setup, sample and demo data
+  web/                  the pages (/, /map, /demo): endpoints and cache
+    render/             Qute templates, page layout, scripts and styles
+    model/              what the templates show: summary, team cards, map bubbles, badges
+    format/             numbers, periods, trends, colors and JSON as text
 src/main/resources/
   application.yaml      configuration of all profiles
   sample-teams.yaml     teams of dev mode and tests
   db/migration/         Flyway schema
-src/main/webui/         Lit + TypeScript frontend (Vite)
+  templates/            Qute templates of the pages
+src/main/webui/         styles and Lit + TypeScript components of the pages (Vite)
 ```
 
 ## License

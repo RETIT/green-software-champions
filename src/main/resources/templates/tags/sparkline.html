@@ -1,0 +1,17 @@
+{@io.retit.greensoftware.web.model.Sparkline it}
+{! Inside a summary, so only with elements that are allowed there. Without a line, it keeps its size. !}
+<gsc-sparkline{#if it.exists} points="{it.points}"{/if}>
+  {#if it.exists}
+  <span class="plot" role="img" aria-label="{it.label}">
+    <svg viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true">
+      {#for segment in it.segments}
+      <path class="area" d="{segment.area}"/>
+      <path class="line" d="{segment.line}"/>
+      {/for}
+    </svg>
+    {#for dot in it.dots}
+    <span class="dot {dot.cssClass}" style="left:{dot.x}%;top:{dot.y}%"></span>
+    {/for}
+  </span>
+  {/if}
+</gsc-sparkline>

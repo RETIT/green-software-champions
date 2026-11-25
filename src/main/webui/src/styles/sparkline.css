@@ -1,0 +1,56 @@
+/* Colored by --sparkline-color and --sparkline-marker-color (defaults to the line color). */
+gsc-sparkline {
+  --_color: var(--sparkline-color, var(--retit-green));
+  display: block;
+  position: relative;
+  width: 6em;
+  height: 2em;
+}
+
+gsc-sparkline .plot {
+  display: block;
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+gsc-sparkline svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+gsc-sparkline .line {
+  fill: none;
+  stroke: var(--_color);
+  stroke-width: 2px;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+gsc-sparkline .area {
+  fill: color-mix(in srgb, var(--_color) 10%, transparent);
+}
+
+gsc-sparkline .dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--_color);
+  box-shadow: 0 0 0 2px var(--retit-surface);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+gsc-sparkline .dot.isolated {
+  width: 4px;
+  height: 4px;
+  box-shadow: none;
+}
+
+gsc-sparkline .dot.current {
+  background: var(--sparkline-marker-color, var(--_color));
+}

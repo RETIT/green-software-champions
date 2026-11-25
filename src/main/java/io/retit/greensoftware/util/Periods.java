@@ -36,6 +36,10 @@ public final class Periods {
         return periods;
     }
 
+    public static int year(String period) {
+        return toYearMonth(period).getYear();
+    }
+
     public static int lengthInDays(String period) {
         return toYearMonth(period).lengthOfMonth();
     }

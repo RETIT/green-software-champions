@@ -1,5 +1,8 @@
 package io.retit.greensoftware.dto;
 
+import io.retit.greensoftware.service.Leaderboard;
+import io.retit.greensoftware.service.RankedTeam;
+
 import java.util.List;
 
 public class LeaderboardEntryDto {
@@ -30,4 +33,30 @@ public class LeaderboardEntryDto {
     public List<CarbonHistoryPointDto> history;
 
     public String period;
+
+    public static List<LeaderboardEntryDto> from(Leaderboard leaderboard) {
+        return leaderboard.teams().stream()
+                .map(team -> from(leaderboard.period(), team))
+                .toList();
+    }
+
+    private static LeaderboardEntryDto from(String period, RankedTeam ranked) {
+        LeaderboardEntryDto dto = new LeaderboardEntryDto();
+        dto.teamId = ranked.team().id();
+        dto.teamName = ranked.team().name();
+        dto.teamColor = ranked.team().color();
+        dto.teamIcon = ranked.team().icon();
+        dto.rank = ranked.rank();
+        dto.totalCo2Kg = ranked.emissions().totalCo2Kg();
+        dto.companySharePercent = ranked.companySharePercent();
+        dto.reductionPercent = ranked.reductionPercent();
+        dto.previousCo2Kg = ranked.previousCo2Kg();
+        dto.awsCo2Kg = ranked.emissions().awsCo2Kg();
+        dto.azureCo2Kg = ranked.emissions().azureCo2Kg();
+        dto.gcpCo2Kg = ranked.emissions().gcpCo2Kg();
+        dto.achievements = ranked.achievements().stream().map(AchievementDto::from).toList();
+        dto.history = ranked.history().stream().map(CarbonHistoryPointDto::from).toList();
+        dto.period = period;
+        return dto;
+    }
 }

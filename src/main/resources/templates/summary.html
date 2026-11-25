@@ -1,0 +1,29 @@
+{@io.retit.greensoftware.web.model.Summary summary}
+<div class="summary-bar">
+  <div class="summary-card">
+    <div class="summary-icon">🌫️</div>
+    <div class="summary-body">
+      <div class="value">{summary.total}</div>
+      <div class="label">Company CO₂e in {summary.period}</div>
+    </div>
+  </div>
+  <div class="summary-card">
+    <div class="summary-icon">📊</div>
+    <div class="summary-body">
+      {#if summary.sparkline.exists}
+      {#sparkline summary.sparkline /}
+      <div class="label">{summary.historyMonths}-Month Trend</div>
+      {#else}
+      <div class="value">—</div>
+      <div class="label">Trend</div>
+      {/if}
+    </div>
+  </div>
+  <div class="summary-card">
+    <div class="summary-icon">{summary.trend.icon}</div>
+    <div class="summary-body">
+      <div class="value {summary.trend.cssClass}">{summary.reduction}</div>
+      <div class="label">vs. {summary.previousPeriod}</div>
+    </div>
+  </div>
+</div>

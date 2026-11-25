@@ -1,0 +1,7 @@
+/* Styles of the prerendered pages. The islands style what they add in their shadow DOM. */
+@import "./tokens.css";
+@import "./layout.css";
+@import "./summary.css";
+@import "./leaderboard.css";
+@import "./map.css";
+@import "./sparkline.css";

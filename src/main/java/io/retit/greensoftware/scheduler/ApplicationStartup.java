@@ -3,6 +3,7 @@ package io.retit.greensoftware.scheduler;
 import io.retit.greensoftware.service.CarbonDataService;
 import io.retit.greensoftware.service.DevSampleDataService;
 import io.retit.greensoftware.service.TeamSetupService;
+import io.retit.greensoftware.web.PageService;
 import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
@@ -25,6 +26,9 @@ public class ApplicationStartup {
     @Inject
     CarbonDataService carbonDataService;
 
+    @Inject
+    PageService pageService;
+
     /** Only resolvable in the dev build profile. */
     @Inject
     @Any
@@ -44,6 +48,8 @@ public class ApplicationStartup {
             LOG.info("No cloud provider enabled, skipping the initial carbon data sync.");
         }
 
+        // Redundant after a sync, but needed without one, also for changed teams
+        pageService.refresh();
         LOG.info("Application startup complete.");
     }
 }

@@ -1,0 +1,110 @@
+gsc-world-map {
+  display: block;
+  background: var(--retit-surface);
+  border-radius: 3px;
+  box-shadow: var(--retit-shadow);
+  padding: 1.5em;
+  position: relative;
+  overflow: hidden;
+}
+
+gsc-world-map svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.land {
+  fill: var(--retit-map-land);
+  stroke: color-mix(in srgb, var(--retit-map-land) 70%, var(--retit-green-dark));
+  stroke-width: 0.5;
+}
+
+.ocean {
+  fill: var(--retit-map-ocean);
+}
+
+.graticule {
+  fill: none;
+  stroke: var(--retit-border);
+  stroke-width: 0.3;
+}
+
+.team-bubble {
+  cursor: pointer;
+}
+
+.team-bubble circle {
+  opacity: 0.82;
+  transition: all 0.25s ease;
+}
+
+.team-bubble:hover circle {
+  opacity: 1;
+  filter: drop-shadow(0 0 6px currentColor);
+}
+
+.team-bubble text {
+  fill: var(--retit-white);
+  font-size: 10px;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+  font-weight: 700;
+}
+
+.team-bubble .team-label {
+  fill: var(--retit-text);
+  font-size: 9px;
+  font-weight: 600;
+}
+
+@keyframes pulse-ring {
+  0% {
+    r: 0;
+    opacity: 0.6;
+  }
+  100% {
+    r: 40px;
+    opacity: 0;
+  }
+}
+
+.team-bubble .pulse-ring {
+  fill: none;
+  stroke-width: 2;
+  animation: pulse-ring 2.5s ease-out infinite;
+}
+
+.map-legend {
+  display: flex;
+  gap: 1.5em;
+  margin-top: 1em;
+  flex-wrap: wrap;
+  font-size: 0.78em;
+  color: var(--retit-text-light);
+  align-items: center;
+  font-weight: 400;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+}
+
+.legend-circle {
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--retit-green-dark) 25%, var(--retit-bg));
+  border: 2px solid var(--retit-green-dark);
+}
+
+.legend-circle.small {
+  width: 14px;
+  height: 14px;
+}
+
+.legend-circle.large {
+  width: 30px;
+  height: 30px;
+}

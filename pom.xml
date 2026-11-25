@@ -56,7 +56,13 @@
             <artifactId>quarkus-rest-client-jackson</artifactId>
         </dependency>
 
-        <!-- Quinoa (Frontend build/serve) -->
+        <!-- Templates of the dashboard's pages -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-qute</artifactId>
+        </dependency>
+
+        <!-- Quinoa (builds and serves the scripts and styles of the pages) -->
         <dependency>
             <groupId>io.quarkiverse.quinoa</groupId>
             <artifactId>quarkus-quinoa</artifactId>

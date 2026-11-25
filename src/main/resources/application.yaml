@@ -51,10 +51,6 @@ quarkus:
       # (Entra ID)
       role-claim-path: groups,realm_access/roles,roles
     authentication:
-      # fetch() cannot follow a redirect to the identity provider, so the
-      # frontend's requests (X-Requested-With: JavaScript) get 499 instead once
-      # the session has expired, and the frontend reloads the page
-      java-script-auto-redirect: false
       # How long the session outlives the ID token: Keycloak's default SSO
       # Session Idle, during which its refresh token is valid
       session-age-extension: 30M
@@ -71,7 +67,8 @@ quarkus:
       path: /logout
       post-logout-path: /
 
-  # Builds and serves the frontend; in dev mode, proxies to the Vite dev server
+  # Builds and serves the scripts and styles of the pages; in dev mode, proxies
+  # them to the Vite dev server
   quinoa:
     build-dir: dist
     ui-dir: src/main/webui
@@ -79,19 +76,25 @@ quarkus:
       port: 5173
     ignored-path-prefixes: /api
 
-  # No CORS: the frontend is served from this origin, or from the Vite dev
-  # server, which proxies /api here
+  # No CORS: the pages and their scripts and styles are served from this origin
   http:
     port: 8080
+    # Compresses the scripts, styles and the API's responses. The pages are
+    # already compressed when they are rendered, with gzip; with another encoding,
+    # Quarkus would compress them again, with the ETag of the plain page.
+    # text/html must stay in compress-media-types (as by default), as Quarkus
+    # removes the Content-Encoding of the compressed pages otherwise.
+    enable-compression: true
+    compressors: gzip
     # Checked before the REST endpoints check the roles. The most specific
     # path wins.
     auth:
       permission:
-        # The frontend as well, so that opening the dashboard leads to the login
+        # The pages as well, so that opening the dashboard leads to the login
         authenticated:
           paths: /*
           policy: authenticated
-        # Bearer tokens only, not the frontend's session cookie, against CSRF
+        # Bearer tokens only, not the dashboard's session cookie, against CSRF
         admin-api:
           paths: /api/admin/*
           policy: authenticated

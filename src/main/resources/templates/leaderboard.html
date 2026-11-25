@@ -1,0 +1,112 @@
+{#include layout}
+{#include summary /}
+{#if empty}
+<div class="empty-state">
+  <div class="empty-icon">📊</div>
+  <p>
+    No leaderboard data available for <strong>{summary.period}</strong>.<br>
+    Run a carbon data sync to populate the leaderboard,
+    or have a look at the <a href="{Routes:DEMO}">demo data</a>.
+  </p>
+</div>
+{#else}
+<div class="section-header">
+  <h2>🏆 Carbon Footprint Leaderboard</h2>
+  <div class="section-meta">{teams.size} {#if teams.size == 1}team{#else}teams{/if} · {summary.period}</div>
+</div>
+
+<p class="legend">↓ reduction is good &nbsp;·&nbsp; ↑ increase needs attention</p>
+
+<div class="leaderboard-grid">
+  {#for team in teams}
+  <details class="card {team.rankClass}" style="--team-color: {team.color}">
+    <summary>
+      <span class="rank-badge">{team.rank}</span>
+      <span class="team-icon">{team.icon}</span>
+      <span class="team-info">
+        <span class="team-name">{team.name}</span>
+        <span class="team-color-bar"></span>
+      </span>
+
+      <span class="achievements">
+        {#for badge in team.badges.top}
+        {#badge badge compact=true /}
+        {/for}
+        {#if team.badges.more > 0}
+        <span class="more-achievements" title="{team.badges.moreLabels}">+{team.badges.more}</span>
+        {/if}
+      </span>
+
+      {#sparkline team.sparkline /}
+
+      <span class="metrics">
+        <span class="metric">
+          <span class="value">{team.total}</span>
+          <span class="label">CO₂e Total</span>
+        </span>
+        <span class="metric">
+          <span class="value reduction {team.reduction.trend.cssClass}">{team.reduction.text}</span>
+          <span class="label">vs. Prev Period</span>
+        </span>
+        <span class="metric">
+          <span class="value">{team.share.text}</span>
+          <span class="label">Company Share</span>
+        </span>
+      </span>
+
+      <span class="chevron" aria-hidden="true">▼</span>
+    </summary>
+
+    <div class="expand-section">
+      <div>
+        <div class="expand-label">Company share of cloud emissions</div>
+        <div class="share-bar-label">
+          <span>Cloud carbon share</span>
+          <span>{team.share.preciseText}</span>
+        </div>
+        <div class="share-bar-track">
+          <div class="share-bar-fill" style="width:{team.share.barWidth}%"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="expand-label">Provider Breakdown</div>
+        <div class="provider-breakdown">
+          <div class="provider-chip">
+            <div class="pname">☁️ AWS</div>
+            <div class="pvalue">{team.providers.aws}</div>
+          </div>
+          <div class="provider-chip">
+            <div class="pname">🔷 Azure</div>
+            <div class="pvalue">{team.providers.azure}</div>
+          </div>
+          <div class="provider-chip">
+            <div class="pname">🟡 GCP</div>
+            <div class="pvalue">{team.providers.gcp}</div>
+          </div>
+        </div>
+      </div>
+
+      {#if team.chart}
+      <div class="history">
+        <div class="expand-label">{team.chart.label}</div>
+        <gsc-history-chart history="{team.chart.points}"></gsc-history-chart>
+      </div>
+      {/if}
+
+      {#if team.badges.all}
+      <div>
+        <div class="expand-label">🏅 Achievements</div>
+        <div class="achievement-list">
+          {#for badge in team.badges.all}
+          {#badge badge /}
+          {/for}
+        </div>
+      </div>
+      {/if}
+    </div>
+  </details>
+  {/for}
+</div>
+{/if}
+{/include}

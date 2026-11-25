@@ -1,0 +1,11 @@
+{@io.retit.greensoftware.web.model.Badge it}
+{@Boolean compact=false}
+{! The compact badge leaves out the title and tier, which the tooltip names !}
+<span class="badge{#if compact} compact{/if}" title="{it.tooltip}">
+  <span class="icon">{it.icon}</span>
+  {#if !compact}
+  <span class="title">{it.title}</span>
+  {#if it.tier}<span class="tier">{it.tier}</span>{/if}
+  {/if}
+  {#if it.count > 1}<span class="count">×{it.count}</span>{/if}
+</span>
