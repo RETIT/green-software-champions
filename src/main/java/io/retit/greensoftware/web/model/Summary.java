@@ -1,7 +1,7 @@
 package io.retit.greensoftware.web.model;
 
-import io.retit.greensoftware.service.CompanySummary;
-import io.retit.greensoftware.util.Periods;
+import io.retit.greensoftware.emissions.Periods;
+import io.retit.greensoftware.leaderboard.CompanySummary;
 import io.retit.greensoftware.web.format.Format;
 import io.retit.greensoftware.web.format.Trend;
 

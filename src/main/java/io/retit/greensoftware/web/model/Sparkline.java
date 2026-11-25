@@ -1,8 +1,8 @@
 package io.retit.greensoftware.web.model;
 
-import io.retit.greensoftware.service.HistoryPoint;
-import io.retit.greensoftware.util.Periods;
-import io.retit.greensoftware.util.Reductions;
+import io.retit.greensoftware.emissions.Periods;
+import io.retit.greensoftware.emissions.Reductions;
+import io.retit.greensoftware.leaderboard.HistoryPoint;
 import io.retit.greensoftware.web.format.Format;
 import io.retit.greensoftware.web.format.Json;
 import io.retit.greensoftware.web.format.Trend;

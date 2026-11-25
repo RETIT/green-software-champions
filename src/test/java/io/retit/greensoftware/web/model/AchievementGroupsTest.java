@@ -1,7 +1,7 @@
 package io.retit.greensoftware.web.model;
 
-import io.retit.greensoftware.entity.AchievementType;
-import io.retit.greensoftware.service.AwardedAchievement;
+import io.retit.greensoftware.achievement.AchievementType;
+import io.retit.greensoftware.achievement.AwardedAchievement;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;

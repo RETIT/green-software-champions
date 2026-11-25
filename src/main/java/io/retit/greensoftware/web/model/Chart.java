@@ -1,6 +1,6 @@
 package io.retit.greensoftware.web.model;
 
-import io.retit.greensoftware.service.HistoryPoint;
+import io.retit.greensoftware.leaderboard.HistoryPoint;
 import io.retit.greensoftware.web.format.Format;
 import io.retit.greensoftware.web.format.Json;
 

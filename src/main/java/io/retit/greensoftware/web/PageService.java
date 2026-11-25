@@ -1,10 +1,10 @@
 package io.retit.greensoftware.web;
 
-import io.retit.greensoftware.service.Dashboard;
-import io.retit.greensoftware.service.DashboardDataChanged;
-import io.retit.greensoftware.service.DemoDataService;
-import io.retit.greensoftware.service.LeaderboardService;
-import io.retit.greensoftware.util.Periods;
+import io.retit.greensoftware.demo.DemoDataService;
+import io.retit.greensoftware.emissions.Periods;
+import io.retit.greensoftware.event.DashboardDataChanged;
+import io.retit.greensoftware.leaderboard.Dashboard;
+import io.retit.greensoftware.leaderboard.LeaderboardService;
 import io.retit.greensoftware.web.render.PageRenderer;
 import io.retit.greensoftware.web.render.RenderedPage;
 import io.retit.greensoftware.web.render.View;
@@ -68,7 +68,7 @@ public class PageService {
             pages = refreshed;
             return true;
         } catch (RuntimeException e) {
-            LOG.error("Rendering the pages failed, keeping the previous ones.", e);
+            LOG.error("Rendering the pages failed, any previous ones are kept.", e);
             return false;
         }
     }

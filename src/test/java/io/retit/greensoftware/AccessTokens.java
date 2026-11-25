@@ -9,13 +9,13 @@ import java.util.Map;
 import java.util.Set;
 
 /** Access tokens of the fake OIDC server of {@link OidcWiremockTestResource}. */
-final class AccessTokens {
+public final class AccessTokens {
 
     private AccessTokens() {
     }
 
     /** With the roles in the claim {@code groups}. */
-    static String accessToken(String userName, Set<String> roles) {
+    public static String accessToken(String userName, Set<String> roles) {
         return claims(userName, roles).sign();
     }
 

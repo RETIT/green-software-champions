@@ -455,12 +455,16 @@ the check themselves.
 
 ```
 src/main/java/io/retit/greensoftware/
-  client/               cloud provider clients (AWS SDK, REST clients of Azure and BigQuery)
-  config/               typed configuration (teams, providers, sync, history)
-  resource/             REST endpoints (/api/leaderboard, /api/admin)
-  dto/                  the JSON of the REST API, separate from what the pages show
-  scheduler/            startup sync or sample data seeding, monthly sync
-  service/              sync, achievements, leaderboard, team setup, sample and demo data
+  ApplicationStartup    team setup, then the startup sync or the sample data
+  team/                 teams and their cloud projects, set up from the teams file
+  emissions/            monthly emissions, reporting periods and reductions
+  sync/                 monthly sync of the emissions into the database
+    provider/           clients of the cloud providers (AWS SDK, REST for Azure and GCP)
+  achievement/          achievements and the rules they are awarded by
+  leaderboard/          ranking, company summary and history
+  event/                CDI events between the packages
+  demo/                 sample data of dev mode and the demo pages
+  api/                  the REST API (/api/leaderboard, /api/admin) and its JSON
   web/                  the pages (/, /map, /demo): endpoints and cache
     render/             Qute templates, page layout, scripts and styles
     model/              what the templates show: summary, team cards, map bubbles, badges

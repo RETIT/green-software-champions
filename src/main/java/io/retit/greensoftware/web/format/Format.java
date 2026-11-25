@@ -1,6 +1,6 @@
 package io.retit.greensoftware.web.format;
 
-import io.retit.greensoftware.util.Periods;
+import io.retit.greensoftware.emissions.Periods;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;

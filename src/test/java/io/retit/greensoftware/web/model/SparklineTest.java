@@ -2,9 +2,9 @@ package io.retit.greensoftware.web.model;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.retit.greensoftware.service.Emissions;
-import io.retit.greensoftware.service.HistoryPoint;
-import io.retit.greensoftware.util.Periods;
+import io.retit.greensoftware.emissions.Emissions;
+import io.retit.greensoftware.emissions.Periods;
+import io.retit.greensoftware.leaderboard.HistoryPoint;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;

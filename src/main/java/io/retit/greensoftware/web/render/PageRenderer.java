@@ -3,7 +3,7 @@ package io.retit.greensoftware.web.render;
 import io.quarkus.oidc.OidcSession;
 import io.quarkus.qute.TemplateInstance;
 import io.quarkus.security.spi.runtime.AuthorizationController;
-import io.retit.greensoftware.service.Dashboard;
+import io.retit.greensoftware.leaderboard.Dashboard;
 import io.retit.greensoftware.web.format.Format;
 import io.retit.greensoftware.web.model.MapBubble;
 import io.retit.greensoftware.web.model.Summary;

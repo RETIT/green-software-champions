@@ -1,7 +1,7 @@
 package io.retit.greensoftware.web;
 
 import io.quarkus.security.ForbiddenException;
-import io.retit.greensoftware.util.Periods;
+import io.retit.greensoftware.emissions.Periods;
 import io.retit.greensoftware.web.render.ErrorPage;
 import io.retit.greensoftware.web.render.PageRenderer;
 import io.retit.greensoftware.web.render.RenderedPage;

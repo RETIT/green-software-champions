@@ -1,8 +1,8 @@
 package io.retit.greensoftware.web.model;
 
-import io.retit.greensoftware.entity.AchievementType;
-import io.retit.greensoftware.service.AwardedAchievement;
-import io.retit.greensoftware.util.Periods;
+import io.retit.greensoftware.achievement.AchievementType;
+import io.retit.greensoftware.achievement.AwardedAchievement;
+import io.retit.greensoftware.emissions.Periods;
 import io.retit.greensoftware.web.format.Format;
 
 import java.util.ArrayList;

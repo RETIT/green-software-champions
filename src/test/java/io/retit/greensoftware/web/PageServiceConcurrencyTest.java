@@ -1,9 +1,9 @@
 package io.retit.greensoftware.web;
 
-import io.retit.greensoftware.service.CompanySummary;
-import io.retit.greensoftware.service.Dashboard;
-import io.retit.greensoftware.service.Leaderboard;
-import io.retit.greensoftware.service.LeaderboardService;
+import io.retit.greensoftware.leaderboard.CompanySummary;
+import io.retit.greensoftware.leaderboard.Dashboard;
+import io.retit.greensoftware.leaderboard.Leaderboard;
+import io.retit.greensoftware.leaderboard.LeaderboardService;
 import io.retit.greensoftware.web.render.PageRenderer;
 import io.retit.greensoftware.web.render.RenderedPage;
 import io.retit.greensoftware.web.render.View;

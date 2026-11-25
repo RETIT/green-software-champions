@@ -1,9 +1,9 @@
 package io.retit.greensoftware.web.model;
 
-import io.retit.greensoftware.service.AwardedAchievement;
-import io.retit.greensoftware.service.Emissions;
-import io.retit.greensoftware.service.RankedTeam;
-import io.retit.greensoftware.service.TeamInfo;
+import io.retit.greensoftware.achievement.AwardedAchievement;
+import io.retit.greensoftware.emissions.Emissions;
+import io.retit.greensoftware.leaderboard.RankedTeam;
+import io.retit.greensoftware.team.TeamInfo;
 import io.retit.greensoftware.web.format.Format;
 import io.retit.greensoftware.web.format.TeamColor;
 import io.retit.greensoftware.web.format.Trend;
