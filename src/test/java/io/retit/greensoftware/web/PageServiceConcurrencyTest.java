@@ -114,6 +114,19 @@ class PageServiceConcurrencyTest {
     }
 
     @Test
+    void viewsOfAPeriod_showTheSameData() {
+        assertTrue(pageService.refresh());
+        data.reads.set(0);
+        assertEquals("1", versionOf(View.LEADERBOARD, OLDER));
+
+        // Committed between the requests, before its refresh
+        data.version = 2;
+
+        assertEquals("1", versionOf(View.MAP, OLDER), "Both views should be rendered from the same read");
+        assertEquals(1, data.reads.get());
+    }
+
+    @Test
     void concurrentRequestsForTheSamePage_renderItOnce() throws Exception {
         assertTrue(pageService.refresh());
         data.reads.set(0);

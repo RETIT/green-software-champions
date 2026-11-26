@@ -117,19 +117,22 @@ class PageServiceTest {
 
         RenderedPage page = pageService.get(View.LEADERBOARD, older).orElseThrow();
         assertSame(page, pageService.get(View.LEADERBOARD, older).orElseThrow());
+        RenderedPage map = pageService.get(View.MAP, older).orElseThrow();
 
-        assertEquals(List.of(older), counting.periods);
+        assertEquals(List.of(older, older), counting.periods, "Both views at the first request");
         assertTrue(html(page).contains("?period=" + older), "The navigation should keep the period");
+        assertTrue(html(map).contains("Carbon Footprint World Map"));
     }
 
     @Test
     void get_thatFails_isTriedAgain() {
         CountingRenderer counting = installRenderer();
         counting.failingView = View.MAP;
-        assertThrows(IllegalStateException.class, () -> pageService.get(View.MAP, older));
+        assertThrows(IllegalStateException.class, () -> pageService.get(View.LEADERBOARD, older),
+                "The pages of a period belong together");
 
         counting.failingView = null;
-        assertTrue(pageService.get(View.MAP, older).isPresent());
+        assertTrue(pageService.get(View.LEADERBOARD, older).isPresent());
     }
 
     @Test

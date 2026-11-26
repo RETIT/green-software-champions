@@ -10,14 +10,15 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
-/** The pages rendered from one state of the data. At most one per view and period. */
+/**
+ * The pages rendered from one state of the data. Those of a period are rendered together,
+ * a page per view, so that they show the same data and it is read once.
+ */
 final class PageSet {
-
-    private record PageKey(View view, String period) {}
 
     private final String defaultPeriod;
     private final List<String> periods;
-    private final Map<PageKey, RenderedPage> pages = new ConcurrentHashMap<>();
+    private final Map<String, Map<View, RenderedPage>> pages = new ConcurrentHashMap<>();
 
     PageSet(String defaultPeriod, List<String> periodsWithData) {
         this.defaultPeriod = defaultPeriod;
@@ -37,8 +38,8 @@ final class PageSet {
         return periods;
     }
 
-    /** The page, rendered by {@code render} at the first request. */
-    RenderedPage get(View view, String period, Supplier<RenderedPage> render) {
-        return pages.computeIfAbsent(new PageKey(view, period), key -> render.get());
+    /** The pages of the period by view, rendered by {@code render} at the first request. */
+    Map<View, RenderedPage> get(String period, Supplier<Map<View, RenderedPage>> render) {
+        return pages.computeIfAbsent(period, key -> render.get());
     }
 }

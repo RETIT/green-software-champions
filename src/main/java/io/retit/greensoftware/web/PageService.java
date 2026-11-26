@@ -15,8 +15,11 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
 
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 
 /**
  * Keeps the rendered pages in memory. Whenever the data changes, {@link #refresh} renders
@@ -62,9 +65,7 @@ public class PageService {
         try {
             Dashboard dashboard = leaderboardService.getDashboard(null);
             PageSet refreshed = new PageSet(dashboard.period(), leaderboardService.periodsWithData());
-            for (View view : View.values()) {
-                refreshed.get(view, refreshed.defaultPeriod(), () -> render(view, dashboard, refreshed));
-            }
+            refreshed.get(refreshed.defaultPeriod(), () -> render(dashboard, refreshed));
             pages = refreshed;
             return true;
         } catch (RuntimeException e) {
@@ -85,8 +86,8 @@ public class PageService {
         if (!current.periods().contains(shown)) {
             return Optional.empty();
         }
-        return Optional.of(current.get(view, shown,
-                () -> render(view, leaderboardService.getDashboard(shown), current)));
+        return Optional.of(current.get(shown,
+                () -> render(leaderboardService.getDashboard(shown), current)).get(view));
     }
 
     /** Renders the pages if that failed at startup, so that the dashboard recovers by itself. */
@@ -111,11 +112,22 @@ public class PageService {
             current = new PageSet(period, List.of());
             demoPages = current;
         }
-        return current.get(view, period,
-                () -> renderer.renderDemo(view, demoDataService.getDashboard(period)));
+        return current.get(period, () -> {
+            Dashboard dashboard = demoDataService.getDashboard(period);
+            return renderViews(v -> renderer.renderDemo(v, dashboard));
+        }).get(view);
     }
 
-    private RenderedPage render(View view, Dashboard dashboard, PageSet pageSet) {
-        return renderer.render(view, dashboard, pageSet.defaultPeriod(), pageSet.periods());
+    private Map<View, RenderedPage> render(Dashboard dashboard, PageSet pageSet) {
+        return renderViews(view -> renderer.render(view, dashboard, pageSet.defaultPeriod(), pageSet.periods()));
+    }
+
+    /** The page of every view; if one fails, none is kept. */
+    private static Map<View, RenderedPage> renderViews(Function<View, RenderedPage> render) {
+        Map<View, RenderedPage> rendered = new EnumMap<>(View.class);
+        for (View view : View.values()) {
+            rendered.put(view, render.apply(view));
+        }
+        return rendered;
     }
 }
