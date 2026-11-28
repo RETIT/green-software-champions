@@ -1,6 +1,6 @@
-# Green Software Champions
+# Green Cloud Champions
 
-[![Build](https://github.com/retit/green-software-champions/actions/workflows/build.yml/badge.svg)](https://github.com/retit/green-software-champions/actions/workflows/build.yml)
+[![Build](https://github.com/retit/green-cloud-champions/actions/workflows/build.yml/badge.svg)](https://github.com/retit/green-cloud-champions/actions/workflows/build.yml)
 
 A gamified leaderboard for the carbon footprint of your teams' cloud accounts.
 It fetches the monthly CO₂-equivalent emissions of each team's cloud projects,
@@ -53,8 +53,8 @@ Lit + TypeScript, built with Vite and served by Quarkus through Quinoa.
 ## Quick start: dev mode with sample data
 
 ```bash
-git clone https://github.com/retit/green-software-champions.git
-cd green-software-champions
+git clone https://github.com/retit/green-cloud-champions.git
+cd green-cloud-champions
 mvn quarkus:dev
 ```
 
